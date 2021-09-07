@@ -11,8 +11,11 @@ import threading
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.swarm import CachedCfFactory, Swarm
+from pynput.keyboard import Key, Controller
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.utils import uri_helper
+
+height = 0
 
 # Change uris according to your setup
 URI0 = 'radio://0/80/2M/E7E7E7E7E7'
@@ -53,7 +56,8 @@ def thread_function(scf):
     scf._continue = True
     cf = scf.cf
     x = input()
-    cf.commander.send_stop_setpoint()
+    print("Height: ", height)
+    land(cf, height)
     scf._continue = False
     print("Kill Confirmed")
 
@@ -67,6 +71,57 @@ def reset_estimator(scf):
     time.sleep(2)
 
 
+def take_off(cf, z):
+    take_off_time = .5
+    sleep_time = 0.1
+    steps = int(take_off_time / sleep_time)
+    vz = z / take_off_time
+
+    for i in range(steps):
+                                            #   vx, vy, yaw_rate, Z
+        cf.commander.send_velocity_world_setpoint(0, 0, 0, vz)
+        time.sleep(sleep_time)
+
+
+def hover(scf, z, seconds):
+    cf = scf.cf
+
+    # Hover in place
+    for _ in range(seconds):
+        cf.commander.send_hover_setpoint(0, 0, 0, z)
+        time.sleep(0.1)
+        if e_stop_check(scf, z):
+            return
+
+
+def land(cf, z):
+    landing_time = 1.0
+    sleep_time = 0.1
+    steps = int(landing_time / sleep_time)
+    vz = -z / landing_time
+
+    for _ in range(steps):
+                                    #   vx, vy, yaw_rate, Z
+        cf.commander.send_hover_setpoint(0, 0, 0, vz)
+        time.sleep(sleep_time)
+
+    cf.commander.send_stop_setpoint()
+    # Make sure that the last packet leaves before the link is closed
+    # since the message queue is not flushed before closing
+    time.sleep(0.1)
+
+    # kill thread
+    keyboard = Controller()
+    keyboard.press(Key.enter)
+    keyboard.release(Key.enter)
+
+
+def e_stop_check(scf, z):
+    if not scf._continue:
+        land(z)
+        return False
+
+
 def run_sequence(scf, params):
     # This is used to let the kill thread work
     x = threading.Thread(target=thread_function, args=(scf,))
@@ -75,53 +130,19 @@ def run_sequence(scf, params):
     cf = scf.cf
 
     print("Beginning Flight")
-    if not scf._continue:
+    global height
+    height = 1  # in meters
+    e_stop_check(scf, height)
+
+    print("Take off")
+    take_off(cf, height)
+    print("Hover")
+    hover(scf, height, 30)  # every 10 is 1 second
+
+    if e_stop_check(scf, height):
         return
-
-    # Take off low
-    for y in range(10):
-                                    #   vx, vy, yaw_rate, Z
-        cf.commander.send_hover_setpoint(0, 0, 0, y / 25)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-
-    # _ means you don't care about the value just that it the loop happens that many times (Everything in meters)
-    # Hover in place
-    for _ in range(10):
-        cf.commander.send_hover_setpoint(0, 0, 0, 1)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-
-    # Hover in place
-    for _ in range(20):
-        cf.commander.send_hover_setpoint(0, 0, 0, 1)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-
-    # move foward (x) at .1 yaw
-    for _ in range(50):
-        cf.commander.send_hover_setpoint(0.25, 0, .3, 1)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-
-    # Hover
-    for _ in range(20):
-        cf.commander.send_hover_setpoint(0, 0, 0, 1)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-    # Land
-    for y in range(10):
-        cf.commander.send_hover_setpoint(0, 0, 0, (10 - y) / 25)
-        time.sleep(0.1)
-        if not scf._continue:
-            return
-
-    cf.commander.send_stop_setpoint()
+    print("Land")
+    land(cf, height)
 
 if __name__ == '__main__':
     # Initialize the low-level drivers
