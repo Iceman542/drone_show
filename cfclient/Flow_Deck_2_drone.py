@@ -139,6 +139,7 @@ def run_sequence(scf, params):
     print("Hover")
     hover(scf, height, 30)  # every 10 is 1 second
 
+    # Checks if e stop was pressed
     if e_stop_check(scf, height):
         return
     print("Land")
