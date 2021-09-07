@@ -15,8 +15,6 @@ from pynput.keyboard import Key, Controller
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.utils import uri_helper
 
-height = 0
-
 # Change uris according to your setup
 URI0 = 'radio://0/80/2M/E7E7E7E7E7'
 # URI1 = 'radio://0/60/2M/E7E7E7E7E5'
@@ -56,10 +54,8 @@ def thread_function(scf):
     scf._continue = True
     cf = scf.cf
     x = input()
-    print("Height: ", height)
-    land(cf, height)
     scf._continue = False
-    print("Kill Confirmed")
+    print("E-Stop Landing")
 
 
 def reset_estimator(scf):
@@ -72,7 +68,7 @@ def reset_estimator(scf):
 
 
 def take_off(cf, z):
-    take_off_time = .5
+    take_off_time = .75
     sleep_time = 0.1
     steps = int(take_off_time / sleep_time)
     vz = z / take_off_time
@@ -90,7 +86,17 @@ def hover(scf, z, seconds):
     for _ in range(seconds):
         cf.commander.send_hover_setpoint(0, 0, 0, z)
         time.sleep(0.1)
-        if e_stop_check(scf, z):
+        if e_stop_check(scf, z) is False:
+            return
+
+
+def move(scf, seconds, vx, vy, yaw_rate, z):
+    cf = scf.cf
+
+    for _ in range(seconds):
+        cf.commander.send_hover_setpoint(vx, vy, yaw_rate, z)
+        time.sleep(0.1)
+        if e_stop_check(scf, z) is False:
             return
 
 
@@ -118,7 +124,7 @@ def land(cf, z):
 
 def e_stop_check(scf, z):
     if not scf._continue:
-        land(z)
+        land(scf.cf, z)
         return False
 
 
@@ -130,17 +136,18 @@ def run_sequence(scf, params):
     cf = scf.cf
 
     print("Beginning Flight")
-    global height
     height = 1  # in meters
+
     e_stop_check(scf, height)
 
     print("Take off")
     take_off(cf, height)
     print("Hover")
-    hover(scf, height, 30)  # every 10 is 1 second
-
+    hover(scf, height, 20)  # every 10 is 1 second
+    print("Moving")
+    move(scf, 40, 0.25, 0, .1, height)
     # Checks if e stop was pressed
-    if e_stop_check(scf, height):
+    if e_stop_check(scf, height) is False:
         return
     print("Land")
     land(cf, height)
