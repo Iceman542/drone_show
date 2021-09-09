@@ -11,6 +11,7 @@ import threading
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.swarm import CachedCfFactory, Swarm
+from cflib.crazyflie.log import LogConfig
 from pynput.keyboard import Key, Controller
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.utils import uri_helper
@@ -55,8 +56,7 @@ def thread_function(scf):
     cf = scf.cf
     x = input()
     scf._continue = False
-    print("E-Stop Landing")
-
+    print("End of FLight")
 
 def reset_estimator(scf):
     print("Pre-Flight Check")
@@ -86,7 +86,7 @@ def hover(scf, z, seconds):
     for _ in range(seconds):
         cf.commander.send_hover_setpoint(0, 0, 0, z)
         time.sleep(0.1)
-        if e_stop_check(scf, z) is False:
+        if e_stop_check(scf) is False:
             return
 
 
@@ -96,7 +96,7 @@ def move(scf, seconds, vx, vy, yaw_rate, z):
     for _ in range(seconds):
         cf.commander.send_hover_setpoint(vx, vy, yaw_rate, z)
         time.sleep(0.1)
-        if e_stop_check(scf, z) is False:
+        if e_stop_check(scf) is False:
             return
 
 
@@ -116,17 +116,15 @@ def land(cf, z):
     # since the message queue is not flushed before closing
     time.sleep(0.1)
 
-    # kill thread
-    keyboard = Controller()
-    keyboard.press(Key.enter)
-    keyboard.release(Key.enter)
 
-
-def e_stop_check(scf, z):
+def e_stop_check(scf):
     if not scf._continue:
-        land(scf.cf, z)
-        return False
+        raise Exception("E-Stop")
 
+
+# This function is taking the log and printing it
+def log_stab_callback(timestamp, data, logconf):
+    print('[%d][%s]: %s' % (timestamp, logconf.name, data))
 
 def run_sequence(scf, params):
     # This is used to let the kill thread work
@@ -135,28 +133,46 @@ def run_sequence(scf, params):
 
     cf = scf.cf
 
+    # Logging
+    logconf = lg_stab
+    cf.log.add_config(logconf)
+    logconf.data_received_cb.add_callback(log_stab_callback)
+    logconf.start()
+
     print("Beginning Flight")
     height = 1  # in meters
 
-    e_stop_check(scf, height)
+    e_stop_check(scf)
 
-    print("Take off")
-    take_off(cf, height)
-    print("Hover")
-    hover(scf, height, 20)  # every 10 is 1 second
-    print("Moving")
-    move(scf, 40, 0.25, 0, .1, height)
-    # Checks if e stop was pressed
-    if e_stop_check(scf, height) is False:
-        return
-    print("Land")
-    land(cf, height)
+    try:
+        print("Take off")
+        take_off(cf, height)
+        print("Hover")
+        hover(scf, height, 20)  # every 10 is 1 second
+        print("Moving")
+        move(scf, 40, 0.25, 0, .1, height)
+        print("Land")
+        land(cf, height)
+
+    except:
+        print("E-Stop Triggered")
+        land(cf, height)
+        logconf.stop()
+
+
 
 if __name__ == '__main__':
     # Initialize the low-level drivers
     cflib.crtp.init_drivers()
 
+    # Logging attributes
+    lg_stab = LogConfig(name='Stabilizer', period_in_ms=1000)
+    lg_stab.add_variable('pm.batteryLevel', 'float')
+    lg_stab.add_variable('pm.state', 'int8_t')
+    lg_stab.add_variable('pm.vbat', 'float')
+
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(uris, factory=factory) as swarm:
         swarm.parallel(reset_estimator)
         swarm.parallel(run_sequence, args_dict=params)
+

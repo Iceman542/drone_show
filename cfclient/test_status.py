@@ -124,5 +124,4 @@ if __name__ == '__main__':
     lg_stab.add_variable('pm.chargeCurrent', 'float')
 
     with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
-
         simple_log_async(scf, lg_stab)
