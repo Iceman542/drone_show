@@ -11,7 +11,7 @@ from cflib.crazyflie.syncLogger import SyncLogger
 
 # URI to the Crazyflie to connect to
 
-uri = uri_helper.uri_from_env(default='usb://0')
+uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 #uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 #uri = uri_helper.uri_from_env(default='usb://0/E7E7E7E7E7')
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # Initialize the low-level drivers
     cflib.crtp.init_drivers()
 
-    lg_stab = LogConfig(name='Stabilizer', period_in_ms=10)
+    lg_stab = LogConfig(name='Stabilizer', period_in_ms=1000)
     """
     lg_stab.add_variable('stabilizer.roll', 'float')
     lg_stab.add_variable('stabilizer.pitch', 'float')
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     lg_stab.add_variable('gyro.y', 'float')
     lg_stab.add_variable('gyro.z', 'float')
     """
-
+    lg_stab.add_variable('pm.batteryLevel', 'float')
     lg_stab.add_variable('pm.state', 'int8_t')
     lg_stab.add_variable('pm.vbat', 'float')
     lg_stab.add_variable('pm.chargeCurrent', 'float')
