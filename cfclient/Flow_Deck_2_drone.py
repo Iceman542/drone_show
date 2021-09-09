@@ -18,7 +18,7 @@ from cflib.utils import uri_helper
 
 # Change uris according to your setup
 URI0 = 'radio://0/80/2M/E7E7E7E7E7'
-# URI1 = 'radio://0/60/2M/E7E7E7E7E5'
+URI1 = 'radio://0/80/2M/E7E7E7E7E5' # This is drone 2
 # URI2 = 'radio://0/60/2M/E7E7E7E7E7'
 # URI3 = 'radio://0/5/2M/E7E7E7E702'
 # URI4 = 'radio://0/110/2M/E7E7E7E703'
@@ -26,14 +26,14 @@ URI0 = 'radio://0/80/2M/E7E7E7E7E7'
 # d: diameter of circle
 # z: altitude
 params0 = {'d': 1.0, 'z': 0.3}
-# params1 = {'d': 1.0, 'z': 0.3}
+params1 = {'d': 1.0, 'z': 0.3}
 # params2 = {'d': 0.0, 'z': 0.5}
 # params3 = {'d': 1.0, 'z': 0.3}
 # params4 = {'d': 1.0, 'z': 0.3}
 
 uris = {
     URI0,
-    # URI1,
+    URI1,
     # URI2,
     # URI3,
     # URI4,
@@ -41,7 +41,7 @@ uris = {
 
 params = {
     URI0: [params0],
-    # URI1: [params1],
+    URI1: [params1],
     # URI2: [params2],
     # URI3: [params3],
     # URI4: [params4],
@@ -50,12 +50,14 @@ params = {
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
 
+_continue = True
+
 # This is a kill thread, by pressing enter
-def thread_function(scf):
-    scf._continue = True
-    cf = scf.cf
+def thread_function():
+    global _continue
+    _continue = True
     x = input()
-    scf._continue = False
+    _continue = False
     print("End of FLight")
 
 def reset_estimator(scf):
@@ -67,8 +69,8 @@ def reset_estimator(scf):
     time.sleep(2)
 
 
-def take_off(cf, z):
-    take_off_time = .75
+def take_off(cf, z, in_time):
+    take_off_time = in_time
     sleep_time = 0.1
     steps = int(take_off_time / sleep_time)
     vz = z / take_off_time
@@ -86,7 +88,7 @@ def hover(scf, z, seconds):
     for _ in range(seconds):
         cf.commander.send_hover_setpoint(0, 0, 0, z)
         time.sleep(0.1)
-        if e_stop_check(scf) is False:
+        if e_stop_check() is False:
             return
 
 
@@ -96,12 +98,12 @@ def move(scf, seconds, vx, vy, yaw_rate, z):
     for _ in range(seconds):
         cf.commander.send_hover_setpoint(vx, vy, yaw_rate, z)
         time.sleep(0.1)
-        if e_stop_check(scf) is False:
+        if e_stop_check() is False:
             return
 
 
-def land(cf, z):
-    landing_time = 1.0
+def land(cf, z, in_time):
+    landing_time = in_time
     sleep_time = 0.1
     steps = int(landing_time / sleep_time)
     vz = -z / landing_time
@@ -117,8 +119,8 @@ def land(cf, z):
     time.sleep(0.1)
 
 
-def e_stop_check(scf):
-    if not scf._continue:
+def e_stop_check():
+    if not _continue:
         raise Exception("E-Stop")
 
 
@@ -127,10 +129,6 @@ def log_stab_callback(timestamp, data, logconf):
     print('[%d][%s]: %s' % (timestamp, logconf.name, data))
 
 def run_sequence(scf, params):
-    # This is used to let the kill thread work
-    x = threading.Thread(target=thread_function, args=(scf,))
-    x.start()
-
     cf = scf.cf
 
     # Logging
@@ -142,21 +140,22 @@ def run_sequence(scf, params):
     print("Beginning Flight")
     height = 1  # in meters
 
-    e_stop_check(scf)
+    e_stop_check()
 
     try:
         print("Take off")
-        take_off(cf, height)
+        take_off(cf, height, 0.6) # Time in seconds
         print("Hover")
-        hover(scf, height, 20)  # every 10 is 1 second
-        print("Moving")
-        move(scf, 40, 0.25, 0, .1, height)
+        hover(scf, height, 30)  # every 10 is 1 second
+        print("Moving Foward")
+        move(scf, 60, 0.25, 0, .1, height) # (seconds, vx, vy, yaw_rate, z)
+        print("")
         print("Land")
-        land(cf, height)
+        land(cf, height, 2) # Time in seconds
 
     except:
         print("E-Stop Triggered")
-        land(cf, height)
+        land(cf, height, 1)
         logconf.stop()
 
 
@@ -164,6 +163,10 @@ def run_sequence(scf, params):
 if __name__ == '__main__':
     # Initialize the low-level drivers
     cflib.crtp.init_drivers()
+
+    # This is used to let the kill thread work
+    x = threading.Thread(target=thread_function)
+    x.start()
 
     # Logging attributes
     lg_stab = LogConfig(name='Stabilizer', period_in_ms=1000)
