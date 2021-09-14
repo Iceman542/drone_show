@@ -85,9 +85,11 @@ def take_off(cf, z, in_time):
 
 def hover(scf, z, seconds):
     cf = scf.cf
+    sleep_time = 0.1
+    steps = int(seconds/sleep_time)
 
     # Hover in place
-    for _ in range(seconds):
+    for _ in range(steps):
         cf.commander.send_hover_setpoint(0, 0, 0, z)
         time.sleep(0.1)
         if e_stop_check() is False:
@@ -96,8 +98,10 @@ def hover(scf, z, seconds):
 
 def move(scf, seconds, vx, vy, yaw_rate, z):
     cf = scf.cf
+    sleep_time = 0.1
+    steps = int(seconds / sleep_time)
 
-    for _ in range(seconds):
+    for _ in range(steps):
         cf.commander.send_hover_setpoint(vx, vy, yaw_rate, z)
         time.sleep(0.1)
         if e_stop_check() is False:
@@ -150,14 +154,14 @@ def run_sequence(scf, params):
 
     try:
         print("Take off")
-        take_off(cf, height, 0.6) # Time in seconds
+        take_off(cf, height, 0.6)  # Time in seconds
         print("Hover")
-        hover(scf, height, 30)  # every 10 is 1 second
+        hover(scf, height, 3)
         print("Moving Foward")
-        move(scf, 60, 0.25, 0, .1, height) # (seconds, vx, vy, yaw_rate, z)
+        move(scf, 6, 0.25, 0, .1, height)  # (scf ,seconds, vx, vy, yaw_rate, z)
         print("")
         print("Land")
-        land(cf, height, 2) # Time in seconds
+        land(cf, height, 2)
 
     except EStop:
         print("E-Stop Triggered")
