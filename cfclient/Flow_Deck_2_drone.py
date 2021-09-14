@@ -130,7 +130,7 @@ def log_stab_callback(timestamp, data, logconf):
     print('[%d][%s]: %s' % (timestamp, logconf.name, data))
     if "pm.batteryLevel" in data:
         if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.5:
-             _continue = True
+             _continue = False
 
 def run_sequence(scf, params):
     cf = scf.cf
