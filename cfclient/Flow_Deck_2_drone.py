@@ -52,6 +52,9 @@ logging.basicConfig(level=logging.ERROR)
 
 _continue = True
 
+class EStop(Exception):
+    pass
+
 # This is a kill thread, by pressing enter
 def thread_function():
     global _continue
@@ -61,7 +64,6 @@ def thread_function():
     print("End of FLight")
 
 def reset_estimator(scf):
-    print("Pre-Flight Check")
     cf = scf.cf
     cf.param.set_value('kalman.resetEstimation', '1')
     time.sleep(0.1)
@@ -121,7 +123,7 @@ def land(cf, z, in_time):
 
 def e_stop_check():
     if not _continue:
-        raise Exception("E-Stop")
+        raise EStop
 
 
 # This function is taking the log and printing it
@@ -157,10 +159,13 @@ def run_sequence(scf, params):
         print("Land")
         land(cf, height, 2) # Time in seconds
 
-    except:
+    except EStop:
         print("E-Stop Triggered")
         land(cf, height, 1)
         logconf.stop()
+
+    except Exception as e:
+        print(e)
 
 
 
