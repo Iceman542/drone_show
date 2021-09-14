@@ -11,15 +11,18 @@ from cflib.crazyflie.syncLogger import SyncLogger
 
 # URI to the Crazyflie to connect to
 
-uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 #uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
-#uri = uri_helper.uri_from_env(default='usb://0/E7E7E7E7E7')
+#uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
+uri = uri_helper.uri_from_env(default='usb://0')
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
 
 def log_stab_callback(timestamp, data, logconf):
     print('[%d][%s]: %s' % (timestamp, logconf.name, data))
+    if "pm.batteryLevel" in data:
+        if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.5:
+            print("battery < 5%")
 
 def simple_log_async(scf, logconf):
     cf = scf.cf

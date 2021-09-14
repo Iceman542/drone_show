@@ -126,7 +126,11 @@ def e_stop_check():
 
 # This function is taking the log and printing it
 def log_stab_callback(timestamp, data, logconf):
+    global _continue
     print('[%d][%s]: %s' % (timestamp, logconf.name, data))
+    if "pm.batteryLevel" in data:
+        if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.5:
+             _continue = True
 
 def run_sequence(scf, params):
     cf = scf.cf
