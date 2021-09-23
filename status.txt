@@ -1,0 +1,10 @@
+1) get drone working *
+2) get drone lights working *
+3) get drone height working
+3) unity lights
+4) use gyro to reset orientation
+5) fix blender drone block
+
+radio://0/60/2M/E6E6E6E6E6
+usb://0
+

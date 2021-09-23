@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Crazyflie PC client [![CI](https://github.com/bitcraze/crazyflie-clients-python/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-clients-python/actions?query=workflow%3ACI) [![cfclient](https://snapcraft.io//cfclient/badge.svg)](https://snapcraft.io/cfclient)
 
 
@@ -15,3 +16,11 @@ Check out the [Bitcraze crazyflie-client-python documentation](https://www.bitcr
 ## Contribute
 
 Everyone is encouraged to contribute to the CrazyFlie library by forking the GitHub repository and making a pull request or opening an issue.
+=======
+# drone_show
+Current main file is Flow_Deck_2_drone.py
+
+Scan.py lists all available drones on the radio
+
+ledtest.py Example test of editing leds on LED Deck
+>>>>>>> 7a363956c792892b73d9e227336b347621d32ddf
