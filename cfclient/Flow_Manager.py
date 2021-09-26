@@ -5,17 +5,21 @@
 # /// @brief        This module will process the flight management system
 # //  ***************************************************************************
 
+import math
 import time
 import struct
 import socket
 import traceback
 from threading import Lock
+from cflib.crazyflie.log import LogConfig
 
 g_mutex = Lock()
 g_end_flight = False
 g_begin_flight = False
 g_FlowManagerInstances = dict()
+g_number_of_drones = 0
 g_number_of_drones_ready = 0
+g_first_log = True
 
 DRONE_CMD_HEADER = b'B'
 DRONE_CMD_SET_POSITION = 1
@@ -69,10 +73,16 @@ class FlowManagerCommunications():
         self.m_socket.close()
 
 class FlowManagerClass():
-    def __init__(self, scf, params):
-        self.m_uri = scf.cf.link_uri
+    def __init__(self, scf, params, uri):
         self.m_scf = scf                # self.m_scf.cf
         self.m_params = params          # self.m_params["uri"]
+        if scf is None:
+            self.m_uri = uri
+        else:
+            self.m_uri = scf.cf.link_uri
+        self.m_kalman_x = 0
+        self.m_kalman_y = 0
+        self.m_kalman_z = 0
         self.m_current_yaw = 0
         self.m_end_flight = False
         try:
@@ -82,12 +92,52 @@ class FlowManagerClass():
         finally:
             g_mutex.release()
 
-    def run_sequence(self, route):
-        global g_begin_flight
-        global g_end_flight
-        global g_number_of_drones_ready
+    @staticmethod
+    def log_stab_callback(timestamp, data, logconf):
+        global g_first_log
         try:
-            current_pos = (0, 0, 0)
+            uri = logconf.cf.link_uri
+            if g_first_log:
+                if data["pm.batteryLevel"] > 0.1:
+                    print('Battery: %f' % data["pm.batteryLevel"])
+                    g_first_log = False
+
+            # print('[%d][%s]: %s' % (timestamp, logconf.name, data))
+
+            if uri in g_FlowManagerInstances:
+                fm = g_FlowManagerInstances[uri]
+                fm.m_current_yaw = data["stabilizer.yaw"]
+                fm.m_kalman_x = data["kalman.stateX"]
+                fm.m_kalman_y = data["kalman.stateY"]
+                fm.m_kalman_z = data["kalman.stateZ"]
+                if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.1:
+                    fm.m_end_flight = True
+        except:
+            traceback.print_exc()
+
+    def run_sequence(self, route):
+        global g_mutex
+        global g_number_of_drones
+        global g_number_of_drones_ready
+        global g_end_flight
+
+        try:
+            if self.m_scf is None:
+                cf = None
+            else:
+                cf = self.m_scf.cf
+
+            if cf is not None:
+                # Logging - this creates a thread for each drone
+                logconf = LogConfig(name='Stabilizer', period_in_ms=100)
+                logconf.add_variable('pm.batteryLevel', 'float')
+                logconf.add_variable('stabilizer.yaw', 'float')
+                logconf.add_variable('kalman.stateX', 'float')
+                logconf.add_variable('kalman.stateY', 'float')
+                logconf.add_variable('kalman.stateZ', 'float')
+                cf.log.add_config(logconf)
+                logconf.data_received_cb.add_callback(self.log_stab_callback)
+                logconf.start()
 
             # WAIT FOR THE OTHER DRONES
             try:
@@ -95,12 +145,10 @@ class FlowManagerClass():
                 g_number_of_drones_ready += 1
             finally:
                 g_mutex.release()
-            if not g_begin_flight:
-                time.sleep(0.001)
 
-            if self.m_scf:
-                self.m_scf.cf.commander.send_setpoint(0, 0, 0, 0)
-                self.m_scf.cf.commander.send_velocity_world_setpoint(2, 2, 2, 0)
+            # WAIT FOR ALL DRONES TO SIGNAL READY
+            while g_number_of_drones_ready < g_number_of_drones:
+                time.sleep(0.001)
 
             # START FLIGHT
             for r in route:
@@ -108,66 +156,83 @@ class FlowManagerClass():
                 if g_end_flight or self.m_end_flight:
                     break
 
-                # CALCULATE CHANGE FROM CURRENT POSITION
-                x = round(r[0] - current_pos[0], 2)
-                y = round(r[1] - current_pos[1], 2)
-                z = round(r[2] - current_pos[2], 2)
-                current_pos = r
+                if cf is not None:
+                    x = r[0]
+                    y = r[1]
+                    z = r[2]
+                    rate = r[3]
 
-                # CALCULATE YAW - only move by half the error
-                if self.m_current_yaw > 0:
-                    yaw = -(self.m_current_yaw / 2)
-                else:
-                    yaw = self.m_current_yaw / 2
+                    print("%f %f %f -> %f %f %f %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate))
 
-                print("%f %f %f\n", current_pos[0], current_pos[1], current_pos[2])
-                if self.m_scf:
-
-                    # ????????????????????????
-                    # ????????????????????????
-                    # ????????????????????????
-                    # ????????????????????????
-                    # THIS IS WRONG - i don't know what to do here.
-                    if z != 0:
-                        self.m_scf.cf.commander.send_velocity_world_setpoint(0, 0, 0, z)            #   vx, vy, yaw_rate, Z
+                    # PROCESS UP
+                    if (self.m_kalman_z < z - 0.1):
+                        print("up")
+                        self.m_scf.cf.commander.send_velocity_world_setpoint(0, 0, rate, 0)    # vx, vy, vz, yaw
+                    # HOVER
                     else:
-                        self.m_scf.cf.commander.send_hover_setpoint(x, y, yaw, z)
+                        if ((self.m_kalman_x > x - 0.1) and (self.m_kalman_x < x + 0.1)):
+                            x = 0
+                        else:
+                            x = x - self.m_kalman_x
+                        if ((self.m_kalman_y > y - 0.1) and (self.m_kalman_y < y + 0.1)):
+                            y = 0
+                        else:
+                            y = y - self.m_kalman_y
 
+                        print("hover %d,%d" %(x,y))
+                        self.m_scf.cf.commander.send_hover_setpoint(x, y, 0, z)             # x, y, yaw, z
 
                 time.sleep(0.1)
         except:
-            pass
+            traceback.print_exc()
 
         # LAND
-        while current_pos[2] > 0:
-            self.m_scf.cf.commander.send_hover_setpoint(0, 0, 0, -0.1)
-            current_pos[2] -= 0.1
+        while self.m_kalman_z > 0:
+            self.m_scf.cf.commander.send_hover_setpoint(0, 0, 0, 0.2)
+            self.m_kalman_z -= 0.1
         if self.m_scf:
             self.m_scf.cf.commander.send_stop_setpoint()
+        print(self.m_uri + " offline")
+
+        if cf is not None:
+            logconf.stop()
 
 def __expand_diff(a, b, t):
+    a = float(a)
+    b = float(b)
+    t = float(t)
     if a > b:
         return round((a - b) / t, 2)
     return round(-((b - a) / t), 2)
 
-# CONVERT (x, y, z, time) -> (x, y, z) in 1/10 of a second units
+# CONVERT (x, y, z, mps, time) -> (x, y, z, mps) in 1/10 of a second units
 def __expand_route(route):
     full_route = list()
     x = 0.0
     y = 0.0
     z = 0.0
+    rate = 0.0
     for r in route:
-        t = r[3] * 10    # convert to 1/10 of a second
+        t = r[3] * 10   # convert to 1/10 of a second
         if t == 0:
             t = 10
         diff_x = __expand_diff(r[0], x, t)
         diff_y = __expand_diff(r[1], y, t)
         diff_z = __expand_diff(r[2], z, t)
+        if diff_z > 0:
+            rate_z = r[3] / 10              # store the meters/sec rate
+        else:
+            rate_z = 0
+
+        rate = rate_z
+        if rate < 0.5:
+            rate = 0.5
+
         for i in range(0, t):
             x = round(x + diff_x, 2)
             y = round(y + diff_y, 2)
             z = round(z + diff_z, 2)
-            full_route.append((x, y, z))
+            full_route.append((x, y, z, float(rate)))
     return full_route
 
 def expand_routes(routes):
@@ -176,63 +241,43 @@ def expand_routes(routes):
         new_routes.append(__expand_route(r))
     return new_routes
 
-def update_current_yaw(uri, yaw):
-    try:
-        if uri in g_FlowManagerInstances:
-            g_FlowManagerInstances[uri].m_current_yaw = yaw
-    except:
-        pass
-
 def begin_flight(number_of_drones):
-    global g_begin_flight
-    global g_number_of_drones_ready
-
+    global g_number_of_drones
     print("Begin Flight")
-    time.sleep(0.5)
+    g_number_of_drones = number_of_drones
 
-    # WAIT FOR ALL DRONES TO SIGNAL READY
-    while g_number_of_drones_ready < number_of_drones:
-        time.sleep(0.5)
-    g_begin_flight = True
-
-def end_flight(uri=None):
+def end_flight():
     global g_end_flight
-    # ONLY END FOR THIS DRONE
-    if uri is not None:
-        if uri in g_FlowManagerInstances:
-            g_FlowManagerInstances[uri].m_end_flight = True
-    # END FOR ALL DRONES
-    else:
-        if not g_end_flight:
-            print("End Flight")
-        g_end_flight = True
+    if not g_end_flight:
+        print("End Flight")
+    g_end_flight = True
 
 # *******************************
 # TEST CODE
 # *******************************
 
 # (x_meters, y_meters, z_meters, time_seconds)
-g_test_route1 = [
-    (0, 0, 1, 2),  # go up
-    # (1, 0, 1, 1),   # go right
-    # (1, 1, 1, 1),   # go forward
-    (0, 0, 0, 2),  # land
+g_test_route0 = [
+    (0, 0, 1, 2),   # up
+    (0, 0, 1, 2),   # hover
+    (1, 0, 1, 2),   # forward6
 ]
-g_test_route2 = [
+g_test_route1 = [
     (0, 0, 1, 1),  # go up
     (1, 0, 1, 1),  # go right
     (1, 1, 1, 1),  # go forward
-    (1, 1, 0, 1),  # land
+    (1, 1, 0, 1),  # land6
 ]
-g_test_routes = [g_test_route1, g_test_route2]
+g_test_routes = [g_test_route0, g_test_route1]
 
 if __name__ == '__main__':
     try:
+        i = 0
         g_test_routes = expand_routes(g_test_routes)
-        begin_flight()
+        begin_flight(1)
         for route in g_test_routes:
-            params = {"uri": "USB:/0"}
-            fm = FlowManagerClass(None, params)
+            fm = FlowManagerClass(None, None, "DRONE %d" % i)
+            i += 16
             fm.run_sequence(route)
         end_flight()
     except:

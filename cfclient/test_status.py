@@ -11,9 +11,9 @@ from cflib.crazyflie.syncLogger import SyncLogger
 
 # URI to the Crazyflie to connect to
 
+uri = uri_helper.uri_from_env(default='radio://0/60/2M/E6E6E6E6E6')
 #uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
-#uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
-uri = uri_helper.uri_from_env(default='usb://0')
+#uri = uri_helper.uri_from_env(default='usb://0')
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
@@ -130,6 +130,11 @@ if __name__ == '__main__':
     #lg_stab.add_variable('stabilizer.pitch', 'float')
     lg_stab.add_variable('stabilizer.yaw', 'float')
     lg_stab.add_variable('pm.batteryLevel', 'float')
-
+    lg_stab.add_variable('kalman.stateX', 'float')
+    lg_stab.add_variable('kalman.stateY', 'float')
+    lg_stab.add_variable('kalman.stateZ', 'float')
     with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
+        scf.cf.param.set_value('kalman.initialX', 0)
+        scf.cf.param.set_value('kalman.initialY', 0)
+        scf.cf.param.set_value('kalman.initialZ', 0)
         simple_log_async(scf, lg_stab)

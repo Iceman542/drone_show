@@ -4,6 +4,7 @@ sequence. This script requires some kind of location system, it has been
 tested with (and designed for) the flow deck.
 Change the URI variable to your Crazyflie configuration.
 """
+import sys
 import logging
 import time
 import threading
@@ -12,7 +13,6 @@ import traceback
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.swarm import CachedCfFactory, Swarm
-from cflib.crazyflie.log import LogConfig
 from pynput.keyboard import Key, Controller
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.utils import uri_helper
@@ -27,21 +27,23 @@ URI0 = 'radio://0/60/2M/E6E6E6E6E6'
 # URI3 = 'radio://0/5/2M/E7E7E7E702'
 # URI4 = 'radio://0/110/2M/E7E7E7E703'
 
-# (x_meters, y_meters, z_meters, time_seconds)
+# (x_meters, y_meters, z_meters, rate-mps, time_seconds)
 g_route0 = [
-    (0, 0, 1, 4),   # go up
-    #(1, 0, 1, 1),   # go right
-    #(1, 1, 1, 1),   # go forward
-    (0, 0, 0, 4),   # land
-]
-g_route1 = [
-    (0, 0, 1, 1),   # go up
-    (1, 0, 1, 1),   # go right
-    (1, 1, 1, 1),   # go forward
-    (0, 0, 0, 1),   # land
+    (0, 0, 1, 1),       # go up
+    (0, 0, 1, 2),       # hover
+    (1, 0, 1, 2),       # go forward
+    (1, 1, 1, 3),       # go right
 ]
 
+"""
+g_route1 = [
+    (0, 0, 1, 2),   # go up
+    (1, 0, 1, 2),   # go right
+    (1, 1, 1, 2),   # go forward
+]
 g_routes = [g_route0, g_route1]
+"""
+g_routes = [g_route0]
 
 # d: diameter of circle
 # z: altitude
@@ -79,6 +81,10 @@ def thread_function():
 def reset_estimator(scf):
     print("Pre-Flight Check")
     cf = scf.cf
+    cf.param.set_value('kalman.initialX', 0)
+    cf.param.set_value('kalman.initialY', 0)
+    cf.param.set_value('kalman.initialZ', 0)
+
     cf.param.set_value('kalman.resetEstimation', '1')
     time.sleep(0.1)
     cf.param.set_value('kalman.resetEstimation', '0')
@@ -88,27 +94,14 @@ def reset_estimator(scf):
 def log_stab_callback(timestamp, data, logconf):
     uri = logconf.cf.link_uri
     #print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-    if "pm.batteryLevel" in data:
-        if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.5:
-            Flow_Manager.end_flight(uri)
-    if "stabilizer.yaw" in data:
-        Flow_Manager.update_current_yaw(uri, data["stabilizer.yaw"])
+    Flow_Manager.update_callback(uri, data)
 
 def run_sequence(scf, params):
     global g_routes
-    uri = scf.cf.link_uri
-
-    # Logging - this creates a thread for each drone
-    logconf = LogConfig(name=uri, period_in_ms=100)
-    logconf.add_variable('pm.batteryLevel', 'float')
-    logconf.add_variable('stabilizer.yaw', 'float')
-    scf.cf.log.add_config(logconf)
-    logconf.data_received_cb.add_callback(log_stab_callback)
-    logconf.start()
 
     # Flight Controller
     try:
-        fm = Flow_Manager.FlowManagerClass(scf, params)
+        fm = Flow_Manager.FlowManagerClass(scf, params, scf.cf.link_uri)
         fm.run_sequence(g_routes[params['route']])
     except:
         traceback.print_exc()
@@ -129,3 +122,4 @@ if __name__ == '__main__':
     with Swarm(uris, factory=factory) as swarm:
         swarm.parallel(reset_estimator)
         swarm.parallel(run_sequence, args_dict=params)
+    sys.exit(0)
