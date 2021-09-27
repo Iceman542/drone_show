@@ -31,8 +31,12 @@ URI0 = 'radio://0/60/2M/E6E6E6E6E6'
 g_route0 = [
     (0, 0, 1, 1),       # go up
     (0, 0, 1, 2),       # hover
-    (1, 0, 1, 2),       # go forward
-    (1, 1, 1, 3),       # go right
+    (0.5, 0, 1, 2),     # go forward
+    (-0.5, 0, 1, 2),    # go backwards
+    (0, 0, 1, 2),       # hover
+    (0, 0.5, 1, 2),     # go left
+    (0, -0.5, 1, 2),    # go right
+    (0, 0, 1, 2),       # hover
 ]
 
 """

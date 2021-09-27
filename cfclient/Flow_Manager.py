@@ -161,37 +161,44 @@ class FlowManagerClass():
                     y = r[1]
                     z = r[2]
                     rate = r[3]
+                    vx = 0
+                    vy = 0
+                    vz = 0
 
-                    print("%f %f %f -> %f %f %f %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate))
+                    print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
 
                     # PROCESS UP
-                    if (self.m_kalman_z < z - 0.1):
-                        print("up")
-                        self.m_scf.cf.commander.send_velocity_world_setpoint(0, 0, rate, 0)    # vx, vy, vz, yaw
-                    # HOVER
-                    else:
-                        if ((self.m_kalman_x > x - 0.1) and (self.m_kalman_x < x + 0.1)):
-                            x = 0
-                        else:
-                            x = x - self.m_kalman_x
-                        if ((self.m_kalman_y > y - 0.1) and (self.m_kalman_y < y + 0.1)):
-                            y = 0
-                        else:
-                            y = y - self.m_kalman_y
+                    vx = x - self.m_kalman_x
+                    if vx > rate:
+                        vx = rate
+                    if vx < -rate:
+                        vx = -rate
+                    vy = y - self.m_kalman_y
+                    if vy > rate:
+                        vy = rate
+                    if vy < -rate:
+                        vy = -rate
+                    vz = z - self.m_kalman_z
+                    if vz > rate:
+                        vz = rate
+                    if vz < -rate:
+                        vz = -rate
+                    vyaw = -(self.m_current_yaw / 10)
 
-                        print("hover %d,%d" %(x,y))
-                        self.m_scf.cf.commander.send_hover_setpoint(x, y, 0, z)             # x, y, yaw, z
+                    print("%f %f %f %f" % (vx, vy, vz, vyaw))
+                    cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)  # vx, vy, vz, yaw
 
                 time.sleep(0.1)
         except:
             traceback.print_exc()
 
         # LAND
-        while self.m_kalman_z > 0:
-            self.m_scf.cf.commander.send_hover_setpoint(0, 0, 0, 0.2)
-            self.m_kalman_z -= 0.1
-        if self.m_scf:
-            self.m_scf.cf.commander.send_stop_setpoint()
+        if cf is not None:
+            while self.m_kalman_z > 0.1:
+                cf.commander.send_velocity_world_setpoint(0, 0, -0.3, 0)  # vx, vy, vz, yaw
+                time.sleep(0.1)
+            if self.m_scf:
+                cf.commander.send_stop_setpoint()
         print(self.m_uri + " offline")
 
         if cf is not None:
@@ -229,10 +236,14 @@ def __expand_route(route):
             rate = 0.5
 
         for i in range(0, t):
+            """
             x = round(x + diff_x, 2)
             y = round(y + diff_y, 2)
             z = round(z + diff_z, 2)
             full_route.append((x, y, z, float(rate)))
+            """
+            full_route.append((float(r[0]), float(r[1]), float(r[2]), 0.5))
+
     return full_route
 
 def expand_routes(routes):
