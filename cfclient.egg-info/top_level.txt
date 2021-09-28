@@ -1,3 +1,0 @@
-cfclient
-cfloader
-cfzmq
