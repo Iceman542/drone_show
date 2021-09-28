@@ -1,5 +1,5 @@
 # Drone_show
-Current main file is Flow_Deck_2_drone.py
+Current main file is Flow_Deck_3_drone.py which calls Flow_Manager
 
 Scan.py lists all available drones on the radio
 
