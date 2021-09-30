@@ -11,7 +11,7 @@ from cflib.crazyflie.syncLogger import SyncLogger
 
 # URI to the Crazyflie to connect to
 
-#uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
+#uri = uri_helper.uri_from_env(default='radio://0/60/2M/E6E6E6E6E6')
 #uri = uri_helper.uri_from_env(default='radio://0/80/2M/E7E7E7E7E7')
 uri = uri_helper.uri_from_env(default='usb://0')
 
@@ -19,6 +19,7 @@ uri = uri_helper.uri_from_env(default='usb://0')
 logging.basicConfig(level=logging.ERROR)
 
 def log_stab_callback(timestamp, data, logconf):
+    uri = logconf.cf.link_uri
     print('[%d][%s]: %s' % (timestamp, logconf.name, data))
     if "pm.batteryLevel" in data:
         if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.5:
@@ -29,7 +30,7 @@ def simple_log_async(scf, logconf):
     cf.log.add_config(logconf)
     logconf.data_received_cb.add_callback(log_stab_callback)
     logconf.start()
-    time.sleep(30)
+    time.sleep(60)
     logconf.stop()
 
 """
@@ -109,22 +110,31 @@ if __name__ == '__main__':
     # Initialize the low-level drivers
     cflib.crtp.init_drivers()
 
-    lg_stab = LogConfig(name='Stabilizer', period_in_ms=1000)
+    lg_stab = LogConfig(name='Stabilizer', period_in_ms=100)
     """
     lg_stab.add_variable('stabilizer.roll', 'float')
     lg_stab.add_variable('stabilizer.pitch', 'float')
     lg_stab.add_variable('stabilizer.yaw', 'float')
-    """
 
-    """
     lg_stab.add_variable('gyro.x', 'float')
     lg_stab.add_variable('gyro.y', 'float')
     lg_stab.add_variable('gyro.z', 'float')
-    """
+    
     lg_stab.add_variable('pm.batteryLevel', 'float')
     lg_stab.add_variable('pm.state', 'int8_t')
     lg_stab.add_variable('pm.vbat', 'float')
     lg_stab.add_variable('pm.chargeCurrent', 'float')
+    """
 
+    #lg_stab.add_variable('stabilizer.roll', 'float')
+    #lg_stab.add_variable('stabilizer.pitch', 'float')
+    lg_stab.add_variable('stabilizer.yaw', 'float')
+    lg_stab.add_variable('pm.batteryLevel', 'float')
+    lg_stab.add_variable('kalman.stateX', 'float')
+    lg_stab.add_variable('kalman.stateY', 'float')
+    lg_stab.add_variable('kalman.stateZ', 'float')
     with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
+        scf.cf.param.set_value('kalman.initialX', 0)
+        scf.cf.param.set_value('kalman.initialY', 0)
+        scf.cf.param.set_value('kalman.initialZ', 0)
         simple_log_async(scf, lg_stab)

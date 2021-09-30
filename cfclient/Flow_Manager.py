@@ -156,37 +156,37 @@ class FlowManagerClass():
                 if g_end_flight or self.m_end_flight:
                     break
 
+                x = r[0]
+                y = r[1]
+                z = r[2]
+                rate = r[3]
+                vx = 0
+                vy = 0
+                vz = 0
+
+                print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
+
+                # PROCESS UP
+                vx = x - self.m_kalman_x
+                if vx > rate:
+                    vx = rate
+                if vx < -rate:
+                    vx = -rate
+                vy = y - self.m_kalman_y
+                if vy > rate:
+                    vy = rate
+                if vy < -rate:
+                    vy = -rate
+                vz = z - self.m_kalman_z
+                if vz > rate:
+                    vz = rate
+                if vz < -rate:
+                    vz = -rate
+                vyaw = -(self.m_current_yaw / 2)
+
+                print("%f" % vyaw)
                 if cf is not None:
-                    x = r[0]
-                    y = r[1]
-                    z = r[2]
-                    rate = r[3]
-                    vx = 0
-                    vy = 0
-                    vz = 0
-
-                    print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
-
-                    # PROCESS UP
-                    vx = x - self.m_kalman_x
-                    if vx > rate:
-                        vx = rate
-                    if vx < -rate:
-                        vx = -rate
-                    vy = y - self.m_kalman_y
-                    if vy > rate:
-                        vy = rate
-                    if vy < -rate:
-                        vy = -rate
-                    vz = z - self.m_kalman_z
-                    if vz > rate:
-                        vz = rate
-                    if vz < -rate:
-                        vz = -rate
-                    vyaw = -(self.m_current_yaw / 10)
-
-                    print("%f %f %f %f" % (vx, vy, vz, vyaw))
-                    cf.commander.send_velocity_world_setpoint(vx, vy, vz, 0)  # vx, vy, vz, yaw
+                    cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
 
                 time.sleep(0.1)
         except:
@@ -204,46 +204,21 @@ class FlowManagerClass():
         if cf is not None:
             logconf.stop()
 
-def __expand_diff(a, b, t):
-    a = float(a)
-    b = float(b)
-    t = float(t)
-    if a > b:
-        return round((a - b) / t, 2)
-    return round(-((b - a) / t), 2)
-
 # CONVERT (x, y, z, mps, time) -> (x, y, z, mps) in 1/10 of a second units
 def __expand_route(route):
     full_route = list()
-    x = 0.0
-    y = 0.0
-    z = 0.0
     rate = 0.0
     for r in route:
         t = r[3] * 10   # convert to 1/10 of a second
         if t == 0:
             t = 10
-        diff_x = __expand_diff(r[0], x, t)
-        diff_y = __expand_diff(r[1], y, t)
-        diff_z = __expand_diff(r[2], z, t)
-        if diff_z > 0:
-            rate_z = r[3] / 10              # store the meters/sec rate
-        else:
-            rate_z = 0
 
-        rate = rate_z
+        rate = r[3] / 10
         if rate < 0.5:
             rate = 0.5
 
         for i in range(0, t):
-            """
-            x = round(x + diff_x, 2)
-            y = round(y + diff_y, 2)
-            z = round(z + diff_z, 2)
-            full_route.append((x, y, z, float(rate)))
-            """
             full_route.append((float(r[0]), float(r[1]), float(r[2]), 0.5))
-
     return full_route
 
 def expand_routes(routes):
@@ -288,7 +263,7 @@ if __name__ == '__main__':
         begin_flight(1)
         for route in g_test_routes:
             fm = FlowManagerClass(None, None, "DRONE %d" % i)
-            i += 16
+            i += 1
             fm.run_sequence(route)
         end_flight()
     except:
