@@ -54,7 +54,7 @@ def run_sequence(scf, params):
     # Flight Controller
     try:
         fm = Flow_Manager.FlowManagerClass(scf, params, scf.cf.link_uri)
-        fm.run_sequence(g_routes[params['route']])
+        fm.run_sequence(g_routes[scf.cf.link_uri])
     except:
         traceback.print_exc()
 

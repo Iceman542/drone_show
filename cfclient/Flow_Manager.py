@@ -98,8 +98,8 @@ class FlowManagerClass():
         try:
             uri = logconf.cf.link_uri
             if g_first_log:
-                if data["pm.batteryLevel"] > 0.1:
-                    print('Battery: %f' % data["pm.batteryLevel"])
+                if data["pm.state"] != 0:
+                    print(uri + ' is low battery')
                     g_first_log = False
 
             # print('[%d][%s]: %s' % (timestamp, logconf.name, data))
@@ -131,6 +131,7 @@ class FlowManagerClass():
                 # Logging - this creates a thread for each drone
                 logconf = LogConfig(name='Stabilizer', period_in_ms=100)
                 logconf.add_variable('pm.batteryLevel', 'float')
+                logconf.add_variable('pm.state', 'int8_t')
                 logconf.add_variable('stabilizer.yaw', 'float')
                 logconf.add_variable('kalman.stateX', 'float')
                 logconf.add_variable('kalman.stateY', 'float')
@@ -222,10 +223,9 @@ def __expand_route(route):
     return full_route
 
 def expand_routes(routes):
-    new_routes = list()
-    for r in routes:
-        new_routes.append(__expand_route(r))
-    return new_routes
+    for k, v in routes.items():
+        routes[k] = __expand_route(v)
+    return routes
 
 def begin_flight(number_of_drones):
     global g_number_of_drones

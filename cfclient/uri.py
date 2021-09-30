@@ -36,10 +36,15 @@ ROUTE_TEST = [
     (0, 0, 1, 2),       # hover
 ]
 
+ROUTE_TEST2 = [
+    (0, 0, 1, 1),       # go up
+    (0, 0, 1, 5),       # hover
+]
+
 # d: diameter of circle
 # z: altitude
-PARAMS_0 = {'d': 1.0, 'z': 0.3, 'route': 0}
-PARAMS_1 = {'d': 1.0, 'z': 0.3, 'route': 1}
-PARAMS_2 = {'d': 0.0, 'z': 0.5, 'route': 2}
-PARAMS_3 = {'d': 1.0, 'z': 0.3, 'route': 3}
-PARAMS_4 = {'d': 1.0, 'z': 0.3, 'route': 4}
+PARAMS_0 = {'route': 0}
+PARAMS_1 = {'route': 1}
+PARAMS_2 = {'route': 2}
+PARAMS_3 = {'route': 3}
+PARAMS_4 = {'route': 4}
