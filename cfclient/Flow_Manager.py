@@ -97,11 +97,8 @@ class FlowManagerClass():
         global g_first_log
         try:
             uri = logconf.cf.link_uri
-            if g_first_log:
-                if data["pm.state"] != 0:
-                    print(uri + ' is low battery')
-                    g_first_log = False
 
+            # Use this to debug to see battery print
             # print('[%d][%s]: %s' % (timestamp, logconf.name, data))
 
             if uri in g_FlowManagerInstances:
@@ -110,7 +107,8 @@ class FlowManagerClass():
                 fm.m_kalman_x = data["kalman.stateX"]
                 fm.m_kalman_y = data["kalman.stateY"]
                 fm.m_kalman_z = data["kalman.stateZ"]
-                if data["pm.batteryLevel"] < 5.0 and data["pm.batteryLevel"] > 0.1:
+                if data["pm.state"] != 0:
+                    print(uri + ' is low battery')
                     fm.m_end_flight = True
         except:
             traceback.print_exc()
@@ -165,7 +163,8 @@ class FlowManagerClass():
                 vy = 0
                 vz = 0
 
-                print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
+                # This shows all log and true values of drone
+                #print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
 
                 # PROCESS UP
                 vx = x - self.m_kalman_x

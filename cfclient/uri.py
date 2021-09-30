@@ -37,8 +37,9 @@ ROUTE_TEST = [
 ]
 
 ROUTE_TEST2 = [
+    (0, 0, 0, 3),       # wait
     (0, 0, 1, 1),       # go up
-    (0, 0, 1, 5),       # hover
+    (0, 0, 1, 2),       # hover
 ]
 
 # d: diameter of circle
