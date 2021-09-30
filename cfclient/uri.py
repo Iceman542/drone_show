@@ -1,3 +1,5 @@
+
+
 # Change uris according to your setup
 URI_droneA = 'radio://0/60/2M/E6E6E6E6E6'
 URI_droneT1 = 'radio://0/80/2M/E7E7E7E7E7'

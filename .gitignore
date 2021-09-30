@@ -1,2 +1,2 @@
 **/.idea
-cfcclient/uri.py
+cfclient/uri_local.py
