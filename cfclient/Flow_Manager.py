@@ -12,6 +12,10 @@ import socket
 import traceback
 from threading import Lock
 from cflib.crazyflie.log import LogConfig
+from mpl_toolkits import mplot3d
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 g_mutex = Lock()
 g_end_flight = False
@@ -76,6 +80,7 @@ class FlowManagerClass():
     def __init__(self, scf, params, uri):
         self.m_scf = scf                # self.m_scf.cf
         self.m_params = params          # self.m_params["uri"]
+
         if scf is None:
             self.m_uri = uri
         else:
@@ -118,6 +123,8 @@ class FlowManagerClass():
         global g_number_of_drones
         global g_number_of_drones_ready
         global g_end_flight
+        global ax
+        global fig
 
         try:
             if self.m_scf is None:
@@ -191,10 +198,13 @@ class FlowManagerClass():
                 else:
                     vyaw = 0
 
-                print("%f" % vyaw)
+                #print("%f" % vyaw)
+
+                # This is the actual command that send the drone the point to move to
                 if cf is not None:
                     cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
 
+                print("hello")
                 time.sleep(0.1)
         except:
             traceback.print_exc()
@@ -210,6 +220,25 @@ class FlowManagerClass():
 
         if cf is not None:
             logconf.stop()
+
+def animate(x, y, z):
+    print("animating")
+    ax.clear()
+    ax.plot(x, y, z)
+
+
+    # updating data values
+    ax.set_xdata(x)
+    ax.set_ydata(y)
+    ax.set_zdata(z)
+
+    # drawing updated values
+    fig.canvas.draw()
+
+    # This will run the GUI event
+    # loop until all UI events
+    # currently waiting have been processed
+    fig.canvas.flush_events()
 
 # CONVERT (x, y, z, mps, time) -> (x, y, z, mps) in 1/10 of a second units
 def __expand_route(route):
@@ -260,17 +289,17 @@ g_test_route1 = [
     (1, 1, 1, 1),  # go forward
     (1, 1, 0, 1),  # land6
 ]
-g_test_routes = [g_test_route0, g_test_route1]
+g_test_routes = {"g_test_route0": g_test_route0}
 
 if __name__ == '__main__':
     try:
         i = 0
         g_test_routes = expand_routes(g_test_routes)
         begin_flight(1)
-        for route in g_test_routes:
+        for k, v in g_test_routes.items():
             fm = FlowManagerClass(None, None, "DRONE %d" % i)
             i += 1
-            fm.run_sequence(route)
+            fm.run_sequence(v)
         end_flight()
     except:
         traceback.print_exc()
