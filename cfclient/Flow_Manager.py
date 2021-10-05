@@ -182,7 +182,14 @@ class FlowManagerClass():
                     vz = rate
                 if vz < -rate:
                     vz = -rate
-                vyaw = -(self.m_current_yaw / 2)
+
+                vyaw = self.m_current_yaw
+                if vyaw > 0.5:
+                    vyaw = 5.5
+                elif vyaw < -0.5:
+                    vyaw = -5.5
+                else:
+                    vyaw = 0
 
                 print("%f" % vyaw)
                 if cf is not None:
