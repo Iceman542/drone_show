@@ -8,27 +8,34 @@ URI_droneT1 = 'radio://0/80/2M/E7E7E7E7E5' # This is drone 2
 # URI3 = 'radio://0/5/2M/E7E7E7E702'
 # URI4 = 'radio://0/110/2M/E7E7E7E703'
 
-# (x_meters, y_meters, z_meters, rate-mps, time_seconds)
+# (x_meters, y_meters, z_meters, time_seconds)
 ROUTE_0 = [
     (0, 0, 1, 1),       # go up
     (0, 0, 1, 2),       # hover
-    (0.5, 0, 1, 2),     # go forward
-    (-0.5, 0, 1, 2),    # go backwards
-    (0, 0, 1, 2),       # hover
+    (1, 0, 0.5, 2),     # go forward and down
+    (0, 0, 0.5, 3),     # hover
     (0, 0.5, 1, 2),     # go left
-    (0, -0.5, 1, 2),    # go right
+    (0, -1, 1, 2),      # go right
     (0, 0, 1, 2),       # hover
+    (1, 0, 1, 4),       # foward
+    (0, -0.5, 1.5, 2),  # go right and up
+    (-1, 0, 1.5, 3),       # Back and up
+    (0.5, 0.5, 1.5, 2),     # go left and foward
+
 ]
 
 ROUTE_1 = [
-    (0, 0, .5, 1),       # go up
+    (0, 0, 1, 1),       # go up
     (0, 0, .5, 2),       # hover
-    (0.5, 0, .5, 2),     # go forward
-    (-0.5, 0, .5, 2),    # go backwards
-    (0, 0, .5, 2),       # hover
-    (0, 0.5, .5, 2),     # go left
-    (0, -0.5, .5, 2),    # go right
-    (0, 0, .5, 2),       # hover
+    (-1, 0, 1.7, 3),       # Back and up
+    (0, 0, 1.7, 2),       # hover
+    (0, -0.5, 1, 2),  # go right and up
+    (0, 0.5, 1.5, 2),     # go left
+    (0, 0, 1, 2),       # hover
+    (1, 0, 1, 4),       # foward
+    (0, -0.5, 1.5, 2),  # go right and up
+    (-1, 0, 1.5, 3),       # Back
+    (0.5, 0.5, 1.5, 2),     # go left and foward
 ]
 
 ROUTE_TEST = [

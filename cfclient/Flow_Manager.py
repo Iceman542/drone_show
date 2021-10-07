@@ -204,7 +204,6 @@ class FlowManagerClass():
                 if cf is not None:
                     cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
 
-                print("hello")
                 time.sleep(0.1)
         except:
             traceback.print_exc()
