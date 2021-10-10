@@ -47,8 +47,7 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\Capsule.cs" />
-     <Compile Include="Assets\Scripts\Player.cs" />
+     <Compile Include="Assets\Scripts\Transport.cs" />
      <Compile Include="Assets\Scripts\Drone.cs" />
  <Reference Include="UnityEngine">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.13f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
@@ -623,6 +622,9 @@
  <Reference Include="Unity.VSCode.Editor">
  <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.VSCode.Editor.dll</HintPath>
  </Reference>
+ <Reference Include="Unity.Postprocessing.Runtime">
+ <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.Postprocessing.Runtime.dll</HintPath>
+ </Reference>
  <Reference Include="Unity.TextMeshPro.Editor">
  <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
  </Reference>
@@ -638,6 +640,9 @@
  <Reference Include="Unity.TextMeshPro">
  <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
  </Reference>
+ <Reference Include="Unity.Postprocessing.Editor">
+ <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.Postprocessing.Editor.dll</HintPath>
+ </Reference>
  <Reference Include="UnityEditor.UI">
  <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
  </Reference>
@@ -649,12 +654,6 @@
  </Reference>
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/UnityEngine.UI.dll</HintPath>
- </Reference>
- <Reference Include="Unity.Postprocessing.Editor">
- <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.Postprocessing.Editor.dll</HintPath>
- </Reference>
- <Reference Include="Unity.Postprocessing.Runtime">
- <HintPath>C:/development/Unity/Unity Basic/Library/ScriptAssemblies/Unity.Postprocessing.Runtime.dll</HintPath>
  </Reference>
   </ItemGroup>
   <ItemGroup>

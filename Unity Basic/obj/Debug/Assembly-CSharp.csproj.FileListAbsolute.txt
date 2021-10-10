@@ -293,3 +293,8 @@ C:\development\Unity\Unity Basic\Temp\Bin\Debug\UnityEngine.TestRunner.pdb
 C:\development\Unity\Unity Basic\obj\Debug\Assembly-CSharp.csproj.CopyComplete
 C:\development\Unity\Unity Basic\obj\Debug\Assembly-CSharp.dll
 C:\development\Unity\Unity Basic\obj\Debug\Assembly-CSharp.pdb
+C:\development\Unity\Unity Basic\Temp\Bin\Debug\Unity.Postprocessing.Editor.dll
+C:\development\Unity\Unity Basic\Temp\Bin\Debug\Unity.Postprocessing.Runtime.dll
+C:\development\Unity\Unity Basic\Temp\Bin\Debug\Unity.Postprocessing.Runtime.pdb
+C:\development\Unity\Unity Basic\Temp\Bin\Debug\Unity.Postprocessing.Editor.pdb
+C:\development\Unity\Unity Basic\obj\Debug\Assembly-CSharp.csprojAssemblyReference.cache
