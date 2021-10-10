@@ -5,17 +5,19 @@
 # /// @brief        This module will process the flight management system
 # //  ***************************************************************************
 
+import os
 import math
 import time
 import struct
 import socket
+import threading
 import traceback
 from threading import Lock
 from cflib.crazyflie.log import LogConfig
-from mpl_toolkits import mplot3d
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from collections import deque
+
+from uri_local import g_unity, g_routes, g_params
 
 g_mutex = Lock()
 g_end_flight = False
@@ -25,33 +27,33 @@ g_number_of_drones = 0
 g_number_of_drones_ready = 0
 g_first_log = True
 
-DRONE_CMD_HEADER = b'B'
-DRONE_CMD_SET_POSITION = 1
-DRONE_CMD_FOOTER = b'E'
-DRONE_CMD_PACKET_SIZE = 35
-DRONE_CMD_DATA_SIZE = 32
+# ['B' size cmd data 'E']
+DRONE_CMD_HEADER = 0x1F
+DRONE_CMD_FOOTER = 0xF1
+DRONE_CMD_SET_URI = 1
+DRONE_CMD_START_POSITION = 2
+DRONE_CMD_SET_POSITION = 3
+DRONE_CMD_CLOSE = 4
 
 g_drone_comms = None
 
 # NOTE - THIS ISN'T CONNECTED YET
 class FlowManagerCommunications():
     def __init__(self):
-        global g_drone_comms
         self.m_socket = None
-        g_drone_comms = self
+        self.m_drone_queue = deque()
+        self.m_continue = True
 
-    def open(self, address, port):
-        self.m_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.m_socket.connect((str(address), int(port)))
-
-    def write(self, cmd, buf):
-        data = bytearray()
-        data += struct.pack("<B", cmd)
-        data += buf
-        if len(data) < DRONE_CMD_DATA_SIZE + 1:
-            data += bytearray((DRONE_CMD_DATA_SIZE + 1) - len(data))
-        data = DRONE_CMD_HEADER + data + DRONE_CMD_FOOTER
-        return data
+    def open(self, address):
+        try:
+            self.m_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.m_socket.connect((str(address[0]), int(address[1])))
+            t = threading.Thread(target=self.thread, args=(self,))
+            t.start()
+            print("Unity connected: %s:%d" % (str(address[0]), int(address[1])))
+        except:
+            print("Unity failed to connect: %s:%d" % (str(address[0]), int(address[1])))
+            self.m_continue = False
 
     def read(self, buf):
         if len(buf) != DRONE_CMD_PACKET_SIZE or \
@@ -59,10 +61,6 @@ class FlowManagerCommunications():
            buf[DRONE_CMD_PACKET_SIZE - 1] != DRONE_CMD_FOOTER:
             return None
         return buf[2:DRONE_CMD_DATA_SIZE]
-
-    def send(self, cmd, buf):
-        data = self.write(cmd, buf)
-        self.m_socket.send(data)
 
     def recv(self):
         while (True):
@@ -73,29 +71,71 @@ class FlowManagerCommunications():
             data = data.decode('utf-8')
             print(data)
 
+    def send(self, cmd, buf):
+        data = bytearray()
+        data += struct.pack("<BBB", DRONE_CMD_HEADER, len(buf), cmd)
+        data += buf
+        data += struct.pack("<B", DRONE_CMD_FOOTER)
+        if self.m_continue:
+            self.m_socket.send(data)
+
+    def send_uri(self, index, uri):
+        data = struct.pack("<B", index)
+        data += uri.encode('utf-8')
+        self.m_drone_queue.appendleft((DRONE_CMD_SET_URI, data))
+
+    def send_start_point(self, index, x, y, z):
+        data = struct.pack("<Bfff", index, x, y, z)
+        self.m_drone_queue.appendleft((DRONE_CMD_START_POSITION, data))
+
+    def send_point(self, index, x, y, z):
+        data = struct.pack("<Bfff", index, x, y, z)
+        self.m_drone_queue.appendleft((DRONE_CMD_SET_POSITION, data))
+
+    @staticmethod
+    def thread(self):
+        try:
+            while self.m_continue:
+                if len(self.m_drone_queue):
+                    cmd, buf = self.m_drone_queue.pop()
+                    self.send(cmd, buf)
+                else:
+                    time.sleep(0.1)
+        except:
+            traceback.print_exc()
+
     def close(self):
-        self.m_socket.close()
+        self.m_continue = False
+        if self.m_socket:
+            self.send(DRONE_CMD_CLOSE, bytearray())
+            self.m_socket.close()
 
 class FlowManagerClass():
-    def __init__(self, scf, params, uri):
-        self.m_scf = scf                # self.m_scf.cf
-        self.m_params = params          # self.m_params["uri"]
+    def __init__(self, scf, uri):
+        self.m_uri = uri
+        self.m_scf = scf                    # self.m_scf.cf
+        self.m_params = g_params[uri]       # self.m_params["uri"]
 
-        if scf is None:
-            self.m_uri = uri
-        else:
-            self.m_uri = scf.cf.link_uri
         self.m_kalman_x = 0
         self.m_kalman_y = 0
         self.m_kalman_z = 0
         self.m_current_yaw = 0
         self.m_end_flight = False
+
+        # SEND URI INDEX & REFERENCE NAME
+        self.m_index = self.m_params["index"]
+        g_drone_comms.send_uri(self.m_index, uri)
+
+        # SEND STARTING POSITION OF DRONE
+        start_pos = self.m_params["start_pos"]
+        g_drone_comms.send_start_point(self.m_index, start_pos[0], start_pos[1], start_pos[2])
+
         try:
             g_mutex.acquire()
             g_FlowManagerInstances[self.m_uri] = self
-            print(self.m_uri + " online")
         finally:
             g_mutex.release()
+        time.sleep(1)
 
     @staticmethod
     def log_stab_callback(timestamp, data, logconf):
@@ -118,13 +158,16 @@ class FlowManagerClass():
         except:
             traceback.print_exc()
 
+    @staticmethod
     def run_sequence(self, route):
         global g_mutex
         global g_number_of_drones
         global g_number_of_drones_ready
         global g_end_flight
-        global ax
-        global fig
+
+        x = 0
+        y = 1
+        z = 2
 
         try:
             if self.m_scf is None:
@@ -145,6 +188,8 @@ class FlowManagerClass():
                 logconf.data_received_cb.add_callback(self.log_stab_callback)
                 logconf.start()
 
+            print(self.m_uri + " online")
+
             # WAIT FOR THE OTHER DRONES
             try:
                 g_mutex.acquire()
@@ -154,7 +199,7 @@ class FlowManagerClass():
 
             # WAIT FOR ALL DRONES TO SIGNAL READY
             while g_number_of_drones_ready < g_number_of_drones:
-                time.sleep(0.001)
+                time.sleep(0.01)
 
             # START FLIGHT
             for r in route:
@@ -203,6 +248,7 @@ class FlowManagerClass():
                 # This is the actual command that send the drone the point to move to
                 if cf is not None:
                     cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
+                g_drone_comms.send_point(self.m_index, x, y, z)
 
                 time.sleep(0.1)
         except:
@@ -213,47 +259,30 @@ class FlowManagerClass():
             while self.m_kalman_z > 0.1:
                 cf.commander.send_velocity_world_setpoint(0, 0, -0.3, 0)  # vx, vy, vz, yaw
                 time.sleep(0.1)
-            if self.m_scf:
-                cf.commander.send_stop_setpoint()
+            cf.commander.send_stop_setpoint()
+        g_drone_comms.send_point(self.m_index, x, y, 0)
         print(self.m_uri + " offline")
 
         if cf is not None:
             logconf.stop()
-
-def animate(x, y, z):
-    print("animating")
-    ax.clear()
-    ax.plot(x, y, z)
-
-
-    # updating data values
-    ax.set_xdata(x)
-    ax.set_ydata(y)
-    ax.set_zdata(z)
-
-    # drawing updated values
-    fig.canvas.draw()
-
-    # This will run the GUI event
-    # loop until all UI events
-    # currently waiting have been processed
-    fig.canvas.flush_events()
 
 # CONVERT (x, y, z, mps, time) -> (x, y, z, mps) in 1/10 of a second units
 def __expand_route(route):
     full_route = list()
     rate = 0.0
     for r in route:
-        t = r[3] * 10   # convert to 1/10 of a second
+        t = float(r[3])
         if t == 0:
             t = 10
 
         rate = r[3] / 10
-        if rate < 0.5:
+        if rate > 0.5:
             rate = 0.5
 
-        for i in range(0, t):
+        i = 0.0
+        while i < t:
             full_route.append((float(r[0]), float(r[1]), float(r[2]), 0.5))
+            i += 0.1
     return full_route
 
 def expand_routes(routes):
@@ -270,38 +299,42 @@ def end_flight():
     global g_end_flight
     if not g_end_flight:
         print("End Flight")
+    time.sleep(1)
     g_end_flight = True
 
 # *******************************
 # TEST CODE
 # *******************************
 
-# (x_meters, y_meters, z_meters, time_seconds)
-g_test_route0 = [
-    (0, 0, 1, 2),   # up
-    (0, 0, 1, 2),   # hover
-    (1, 0, 1, 2),   # forward6
-]
-g_test_route1 = [
-    (0, 0, 1, 1),  # go up
-    (1, 0, 1, 1),  # go right
-    (1, 1, 1, 1),  # go forward
-    (1, 1, 0, 1),  # land6
-]
-g_test_routes = {"g_test_route0": g_test_route0}
-
 if __name__ == '__main__':
     try:
-        i = 0
-        g_test_routes = expand_routes(g_test_routes)
-        begin_flight(1)
-        for k, v in g_test_routes.items():
-            fm = FlowManagerClass(None, None, "DRONE %d" % i)
-            i += 1
-            fm.run_sequence(v)
-        end_flight()
+        try:
+            g_drone_comms = FlowManagerCommunications()
+            g_drone_comms.open(g_unity)
+
+            i = 0
+            g_routes = expand_routes(g_routes)
+            begin_flight(len(g_routes))
+
+            threads = list()
+            for k, v in g_routes.items():
+                fm = FlowManagerClass(None, k)
+
+                x = threading.Thread(target=fm.run_sequence,args=(fm,v,))
+                x.start()
+                threads.append(x)
+                i += 1
+
+            # WAIT FOR THREADS TO COMPLETE
+            for x in threads:
+                x.join()
+
+            end_flight()
+        finally:
+            g_drone_comms.close()
     except:
         traceback.print_exc()
+    os._exit(0)
 
 # // ////////////////////////////////////////////////////////////////////////////
 # // END Flow_Manager.py

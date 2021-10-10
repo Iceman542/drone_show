@@ -19,9 +19,9 @@ ROUTE_0 = [
     (0, 0, 1, 2),       # hover
     (1, 0, 1, 4),       # foward
     (0, -0.5, 1.5, 2),  # go right and up
-    (-1, 0, 1.5, 3),       # Back and up
-    (0.5, 0.5, 1.5, 2),     # go left and foward
-
+    (-1, 0, 1.5, 3),    # Back and up
+    (0.5, 0.5, 1.5, 2), # go left and foward
+    (0, 0, 1, 2),       # back to takeoff spot
 ]
 
 ROUTE_1 = [
@@ -43,8 +43,6 @@ ROUTE_TEST = [
     (0, 0, 1, 1),       # hover 1 sec
     (.5, .5, 1.5, 2),     # Moves foward, left, and up at the same time
     (-.5,-.5, 1, 2),      # Moves Back, right, and down at the same time
-
-
 ]
 
 ROUTE_TEST2 = [
@@ -52,10 +50,3 @@ ROUTE_TEST2 = [
     (0, 0, 1, 1),       # go up
     (0, 0, 1, 2),       # hover
 ]
-
-# Currently not used
-PARAMS_0 = {'route': 0}
-PARAMS_1 = {'route': 1}
-PARAMS_2 = {'route': 2}
-PARAMS_3 = {'route': 3}
-PARAMS_4 = {'route': 4}
