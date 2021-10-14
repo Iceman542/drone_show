@@ -73,7 +73,7 @@ if __name__ == '__main__':
             g_routes = Flow_Manager.expand_routes(g_routes)
 
             # Connect to unity
-            Flow_Manager.g_drone_comms = FlowManagerCommunications()
+            Flow_Manager.g_drone_comms = Flow_Manager.FlowManagerCommunications()
             Flow_Manager.g_drone_comms.open(g_unity)
 
             # Process the swarm
@@ -82,7 +82,7 @@ if __name__ == '__main__':
                 swarm.parallel(reset_estimator)
                 swarm.parallel(run_sequence)
         finally:
-            g_drone_comms.close()
+            Flow_Manager.g_drone_comms.close()
     except:
         traceback.print_exc()
 

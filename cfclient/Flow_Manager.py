@@ -27,6 +27,7 @@ g_number_of_drones = 0
 g_number_of_drones_ready = 0
 g_first_log = True
 
+
 # ['B' size cmd data 'E']
 DRONE_CMD_HEADER = 0x1F
 DRONE_CMD_FOOTER = 0xF1
@@ -54,7 +55,7 @@ class FlowManagerCommunications():
         except:
             print("Unity failed to connect: %s:%d" % (str(address[0]), int(address[1])))
             self.m_continue = False
-
+    """
     def read(self, buf):
         if len(buf) != DRONE_CMD_PACKET_SIZE or \
            buf[0] != DRONE_CMD_HEADER or \
@@ -69,7 +70,7 @@ class FlowManagerCommunications():
                 data += self.m_socket.recv(DRONE_CMD_PACKET_SIZE - len(data))
             data = self.read(data)
             data = data.decode('utf-8')
-            print(data)
+            print(data) """
 
     def send(self, cmd, buf):
         data = bytearray()
