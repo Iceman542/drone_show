@@ -55,6 +55,7 @@ def run_sequence(scf):
     try:
         uri = scf.cf.link_uri
         fm = Flow_Manager.FlowManagerClass(scf, uri)
+        print(g_routes[uri])
         fm.run_sequence(g_routes[uri])
     except:
         traceback.print_exc()
