@@ -262,6 +262,7 @@ class FlowManagerClass():
                 time.sleep(0.1)
             cf.commander.send_stop_setpoint()
         g_drone_comms.send_point(self.m_index, x, y, 0)
+        end_flight()
         print(self.m_uri + " offline")
 
         if cf is not None:
