@@ -14,7 +14,8 @@ import threading
 import traceback
 from threading import Lock
 from cflib.crazyflie.log import LogConfig
-import numpy as np
+import cflib.crtp
+from cflib.crazyflie.mem import MemoryElement
 from collections import deque
 
 from uri_local import g_unity, g_routes, g_params
@@ -190,6 +191,24 @@ class FlowManagerClass():
                 logconf.start()
 
             print(self.m_uri + " online")
+            """
+            #LED TEST
+            print("Testing LED")
+            cflib.crtp.init_drivers()
+            cf.param.set_value('ring.effect', '2')
+            cf.param.set_value('ring.headlightEnable', '1')
+
+            # Get LED memory and write to it
+            mem = cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
+            if len(mem) > 0:
+                mem[0].leds[0].set(r=0, g=100, b=0)
+                mem[0].leds[3].set(r=0, g=0, b=100)
+                mem[0].leds[6].set(r=100, g=0, b=0)
+                mem[0].leds[9].set(r=100, g=100, b=100)
+                mem[0].write_data(None)
+                print("LED ON")
+            """
+
 
             # WAIT FOR THE OTHER DRONES
             try:
