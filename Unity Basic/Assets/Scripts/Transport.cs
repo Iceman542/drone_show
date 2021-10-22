@@ -19,6 +19,7 @@ static public class CommThread
     static int DRONE_CMD_START_POSITION = 2;
     static int DRONE_CMD_SET_POSITION = 3;
     static int DRONE_CMD_CLOSE = 4;
+    static int DRONE_CMD_SET_LIGHTS = 5;
 
     private static void StartListening(Transport transport)
     {
@@ -141,6 +142,19 @@ static public class CommThread
                             transport.Log("DRONE_CMD_CLOSE");
                             break;
                         }
+
+                        else if (bytes[2] == DRONE_CMD_SET_LIGHTS)
+                        {
+                            int _offset = 4;
+
+                            index = (int)(bytes[3]);
+                            while (_offset + 5 < size)
+                            {
+                                // byte bulb_index, byte r, byte g, byte b, byte visible)
+                                transport.FlowManagerLights(index, bytes[_offset], bytes[_offset+1], bytes[_offset+2], bytes[_offset+3], bytes[_offset+4]);
+                                _offset += 5;
+                            }
+                        }
                     }
                 }
                 catch (Exception)
@@ -207,6 +221,18 @@ public class Transport : MonoBehaviour
         }
     }
 
+    public void FlowManagerLights(int index, byte bulb_index, byte r, byte g, byte b, byte visible)
+    {
+        try
+        {
+            g_drones[index].FlowManagerLights( bulb_index, r, g, b, visible);
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.ToString());
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -218,7 +244,7 @@ public class Transport : MonoBehaviour
         {
             GameObject obj = GameObject.Find(String.Format("Vehicle{0}", i));
             if (obj == null)
-                Debug.Log(String.Format("Transport - failed to find {0}", i));
+                Debug.Log(String.Format("Transport - failed to find Vehicle{0}", i));
             else
                 g_drones[i] = (Drone)obj.GetComponent(typeof(Drone));
         }
