@@ -14,11 +14,10 @@ import threading
 import traceback
 from threading import Lock
 from cflib.crazyflie.log import LogConfig
-import cflib.crtp
-from cflib.crazyflie.mem import MemoryElement
+import numpy as np
 from collections import deque
 
-from uri_local import g_unity, g_routes, g_params
+from uri_local import g_unity, g_routes, g_params, g_lights
 
 g_mutex = Lock()
 g_end_flight = False
@@ -36,6 +35,7 @@ DRONE_CMD_SET_URI = 1
 DRONE_CMD_START_POSITION = 2
 DRONE_CMD_SET_POSITION = 3
 DRONE_CMD_CLOSE = 4
+DRONE_CMD_SET_LIGHTS = 5
 
 g_drone_comms = None
 
@@ -94,6 +94,13 @@ class FlowManagerCommunications():
         data = struct.pack("<Bfff", index, x, y, z)
         self.m_drone_queue.appendleft((DRONE_CMD_SET_POSITION, data))
 
+    # lights = (bulb_index,r,g,b,visible)
+    def send_lights(self, index, lights):
+        data = struct.pack("<B", index)
+        for light in lights:
+            data += struct.pack("<BBBBB", light[0], light[1], light[2], light[3], light[4])
+        self.m_drone_queue.appendleft((DRONE_CMD_SET_LIGHTS, data))
+
     @staticmethod
     def thread(self):
         try:
@@ -123,6 +130,11 @@ class FlowManagerClass():
         self.m_kalman_z = 0
         self.m_current_yaw = 0
         self.m_end_flight = False
+
+        # SETUP LIGHTS
+        self.m_lights_timeout = float(0)
+        self.m_lights_index = 0
+        self.m_lights = g_lights[uri]
 
         # SEND URI INDEX & REFERENCE NAME
         self.m_index = self.m_params["index"]
@@ -191,24 +203,6 @@ class FlowManagerClass():
                 logconf.start()
 
             print(self.m_uri + " online")
-            """
-            #LED TEST
-            print("Testing LED")
-            cflib.crtp.init_drivers()
-            cf.param.set_value('ring.effect', '2')
-            cf.param.set_value('ring.headlightEnable', '1')
-
-            # Get LED memory and write to it
-            mem = cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
-            if len(mem) > 0:
-                mem[0].leds[0].set(r=0, g=100, b=0)
-                mem[0].leds[3].set(r=0, g=0, b=100)
-                mem[0].leds[6].set(r=100, g=0, b=0)
-                mem[0].leds[9].set(r=100, g=100, b=100)
-                mem[0].write_data(None)
-                print("LED ON")
-            """
-
 
             # WAIT FOR THE OTHER DRONES
             try:
@@ -231,9 +225,6 @@ class FlowManagerClass():
                 y = r[1]
                 z = r[2]
                 rate = r[3]
-                vx = 0
-                vy = 0
-                vz = 0
 
                 # This shows all log and true values of drone
                 #print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
@@ -269,6 +260,14 @@ class FlowManagerClass():
                 if cf is not None:
                     cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
                 g_drone_comms.send_point(self.m_index, x, y, z)
+
+                # Lights
+                if self.m_lights_timeout < 0.0:
+                    if self.m_lights_index < len(self.m_lights):
+                        self.m_lights_timeout = float(self.m_lights[self.m_lights_index][0])
+                        g_drone_comms.send_lights(self.m_index, self.m_lights[self.m_lights_index][1])
+                        self.m_lights_index += 1
+                self.m_lights_timeout -= 0.1
 
                 time.sleep(0.1)
         except:

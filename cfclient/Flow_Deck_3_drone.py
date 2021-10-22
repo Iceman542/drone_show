@@ -55,7 +55,6 @@ def run_sequence(scf):
     try:
         uri = scf.cf.link_uri
         fm = Flow_Manager.FlowManagerClass(scf, uri)
-        g_routes[uri]
         fm.run_sequence(fm, g_routes[uri])
         #CHECK PLEASE, IS FM THE CORRECT PASS? Run sequence expects self
     except:
