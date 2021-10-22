@@ -7,9 +7,10 @@ using System.Threading;
 
 public class DroneBulb
 {
-    public byte m_r = 0, m_g = 0, m_b = 0, m_visible = 0;
+    public byte m_visible = 0;
     public bool m_refresh = false;
     public GameObject m_bulb_obj;
+    public Color m_bulb_color;
 }
 
 public class Drone : MonoBehaviour
@@ -44,6 +45,8 @@ public class Drone : MonoBehaviour
             {
                 m_bulbs[j] = new DroneBulb();
                 m_bulbs[j].m_bulb_obj = bulb_obj;
+                m_bulbs[j].m_visible = 0;
+                m_bulbs[j].m_refresh = true;
             }
         }
     }
@@ -84,15 +87,15 @@ public class Drone : MonoBehaviour
         // ISSUE2: -40 is upstage y=-y
         // ISSUE3: 20:1 location factor
 
-        m_flow_manager_pos.x = pos.x;
+        m_flow_manager_pos.x = pos.y;
         m_flow_manager_pos.y = pos.z;
-        m_flow_manager_pos.z = pos.y;
+        m_flow_manager_pos.z = pos.x;
         m_flow_manager_speed = speed;
     }
 
     public void FlowManagerPosition(Vector3 pos, float speed)
     {
-        pos.x += m_flow_manager_start_pos.x;
+        pos.x = m_flow_manager_start_pos.x - pos.x;
         pos.y += m_flow_manager_start_pos.y;
         pos.z += m_flow_manager_start_pos.z;
 
@@ -100,9 +103,9 @@ public class Drone : MonoBehaviour
         // ISSUE2: -40 is upstage y=-y
         // ISSUE3: 20:1 location factor
 
-        m_flow_manager_pos.x = pos.x;
+        m_flow_manager_pos.x = pos.y;
         m_flow_manager_pos.y = pos.z;
-        m_flow_manager_pos.z = pos.y;
+        m_flow_manager_pos.z = pos.x;
         m_flow_manager_speed = speed;
 
         //Debug.Log(String.Format("FlowManagerPosition:: {0}, {1}, {2}, {3}", m_flow_manager_pos.x, m_flow_manager_pos.y, m_flow_manager_pos.z, speed));
@@ -112,9 +115,9 @@ public class Drone : MonoBehaviour
     {
         try
         {
-            m_bulbs[bulb_index].m_r = r;
-            m_bulbs[bulb_index].m_g = g;
-            m_bulbs[bulb_index].m_b = b;
+            m_bulbs[bulb_index].m_bulb_color.r = r;
+            m_bulbs[bulb_index].m_bulb_color.g = g;
+            m_bulbs[bulb_index].m_bulb_color.b = b;
             m_bulbs[bulb_index].m_visible = visible;
             m_bulbs[bulb_index].m_refresh = true;
 
@@ -144,7 +147,16 @@ public class Drone : MonoBehaviour
         {
             if (m_bulbs[bulb_index].m_refresh)
             {
-                m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().material.color = new Color(m_bulbs[bulb_index].m_r, m_bulbs[bulb_index].m_g, m_bulbs[bulb_index].m_b);
+                if (m_bulbs[bulb_index].m_visible == 1)
+                {
+                    m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().enabled = true;
+                    m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().material.color = m_bulbs[bulb_index].m_bulb_color;
+                }
+                else
+                {
+                    m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().enabled = false;
+                    m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().material.color = Color.clear;
+                }
 
                 /*if (m_bulbs[bulb_index].m_visible == 1)
                     m_bulbs[bulb_index].m_bulb_obj.GetComponent<Renderer>().material.SetOverrideTag("RenderType", "Opaque");
