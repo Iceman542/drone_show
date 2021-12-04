@@ -145,15 +145,8 @@ static public class CommThread
 
                         else if (bytes[2] == DRONE_CMD_SET_LIGHTS)
                         {
-                            int _offset = 4;
-
-                            index = (int)(bytes[3]);
-                            while (_offset + 5 < size)
-                            {
-                                // byte bulb_index, byte r, byte g, byte b, byte visible)
-                                transport.FlowManagerLights(index, bytes[_offset], bytes[_offset+1], bytes[_offset+2], bytes[_offset+3], bytes[_offset+4]);
-                                _offset += 5;
-                            }
+                            // index, r, g, b
+                            transport.FlowManagerLights((int)(bytes[3]), bytes[4], bytes[5], bytes[6]);
                         }
                     }
                 }
@@ -188,7 +181,7 @@ public class Transport : MonoBehaviour
     public int g_listening_port = 9999;
     public float g_xfactor = 20f;
     public float g_speed = 0.2f;
-    public int g_drone_count = 2;
+    public int g_drone_count = 3;
 
     private Drone[] g_drones; 
 
@@ -221,11 +214,11 @@ public class Transport : MonoBehaviour
         }
     }
 
-    public void FlowManagerLights(int index, byte bulb_index, byte r, byte g, byte b, byte visible)
+    public void FlowManagerLights(int index, byte r, byte g, byte b)
     {
         try
         {
-            g_drones[index].FlowManagerLights( bulb_index, r, g, b, visible);
+            g_drones[index].FlowManagerLights( r, g, b);
         }
         catch (Exception e)
         {

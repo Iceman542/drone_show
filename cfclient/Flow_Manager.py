@@ -94,11 +94,9 @@ class FlowManagerCommunications():
         data = struct.pack("<Bfff", index, x, y, z)
         self.m_drone_queue.appendleft((DRONE_CMD_SET_POSITION, data))
 
-    # lights = (bulb_index,r,g,b,visible)
-    def send_lights(self, index, lights):
-        data = struct.pack("<B", index)
-        for light in lights:
-            data += struct.pack("<BBBBB", light[0], light[1], light[2], light[3], light[4])
+    # lights = (bulb_index,r,g,b)
+    def send_lights(self, index, rgb):
+        data = struct.pack("<BBBB", index, rgb[0], rgb[1], rgb[2])
         self.m_drone_queue.appendleft((DRONE_CMD_SET_LIGHTS, data))
 
     @staticmethod
@@ -190,6 +188,8 @@ class FlowManagerClass():
                 cf = self.m_scf.cf
 
             if cf is not None:
+                cf.param.set_value('ring.effect', '0')
+
                 # Logging - this creates a thread for each drone
                 logconf = LogConfig(name='Stabilizer', period_in_ms=100)
                 logconf.add_variable('pm.batteryLevel', 'float')
@@ -201,6 +201,13 @@ class FlowManagerClass():
                 cf.log.add_config(logconf)
                 logconf.data_received_cb.add_callback(self.log_stab_callback)
                 logconf.start()
+
+                # Set solid color effect
+                cf.param.set_value('ring.effect', '7')
+
+                cf.param.set_value('ring.solidRed', '0')
+                cf.param.set_value('ring.solidGreen', '0')
+                cf.param.set_value('ring.solidBlue', '0')
 
             print(self.m_uri + " online")
 
@@ -261,11 +268,21 @@ class FlowManagerClass():
                     cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
                 g_drone_comms.send_point(self.m_index, x, y, z)
 
-                # Lights
+                # Lights - (time, (r,g,b))
                 if self.m_lights_timeout < 0.0:
                     if self.m_lights_index < len(self.m_lights):
                         self.m_lights_timeout = float(self.m_lights[self.m_lights_index][0])
-                        g_drone_comms.send_lights(self.m_index, self.m_lights[self.m_lights_index][1])
+
+                        rgb = self.m_lights[self.m_lights_index][1]
+
+                        # Set the RGB values
+                        if cf is not None:
+                            # lights = (bulb_index,r,g,b,visible)
+                            cf.param.set_value('ring.solidRed', str(rgb[0]))
+                            cf.param.set_value('ring.solidGreen', str(rgb[1]))
+                            cf.param.set_value('ring.solidBlue', str(rgb[2]))
+
+                        g_drone_comms.send_lights(self.m_index, rgb)
                         self.m_lights_index += 1
                 self.m_lights_timeout -= 0.1
 
@@ -279,6 +296,8 @@ class FlowManagerClass():
                 cf.commander.send_velocity_world_setpoint(0, 0, -0.3, 0)  # vx, vy, vz, yaw
                 time.sleep(0.1)
             cf.commander.send_stop_setpoint()
+            cf.param.set_value('ring.effect', '0')
+
         g_drone_comms.send_point(self.m_index, x, y, 0)
         end_flight()
         print(self.m_uri + " offline")
