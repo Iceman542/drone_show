@@ -14,10 +14,32 @@ import threading
 import traceback
 from threading import Lock
 from cflib.crazyflie.log import LogConfig
-import numpy as np
+#import numpy as np
 from collections import deque
 
 from uri_local import g_unity, g_routes, g_params, g_lights
+
+COLOR_NAMES = {
+    0: "Off",
+    1: "White spinner",
+    2: "Color spinner",
+    3: "Tilt effect",
+    4: "Brightness effect",
+    5: "Color spinner 2",
+    6: "Double spinner",
+    7: "Solid color effect",
+    8: "Factory test",
+    9: "Battery status",
+    10: "Boat lights",
+    11: "Alert",
+    12: "Gravity",
+    13: "LED tab",
+    14: "Color fader",
+    15: "Link quality",
+    16: "Location server status",
+    17: "Sequencer",
+    18: "Lighthouse quality",
+}
 
 g_mutex = Lock()
 g_end_flight = False
@@ -26,7 +48,6 @@ g_FlowManagerInstances = dict()
 g_number_of_drones = 0
 g_number_of_drones_ready = 0
 g_first_log = True
-
 
 # ['B' size cmd data 'E']
 DRONE_CMD_HEADER = 0x1F
@@ -202,9 +223,8 @@ class FlowManagerClass():
                 logconf.data_received_cb.add_callback(self.log_stab_callback)
                 logconf.start()
 
-                # Set solid color effect
+                # Set default solid color effect
                 cf.param.set_value('ring.effect', '7')
-
                 cf.param.set_value('ring.solidRed', '0')
                 cf.param.set_value('ring.solidGreen', '0')
                 cf.param.set_value('ring.solidBlue', '0')
@@ -338,8 +358,14 @@ def end_flight():
     global g_end_flight
     if not g_end_flight:
         print("End Flight")
-    time.sleep(1)
     g_end_flight = True
+
+    """
+    global g_FlowManagerInstances
+    for uri in g_FlowManagerInstances.items():
+        fm = g_FlowManagerInstances[uri]
+        fm.m_end_flight = True
+    """
 
 # *******************************
 # TEST CODE

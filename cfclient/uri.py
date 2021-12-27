@@ -1,6 +1,9 @@
 
 
 # Change uris according to your setup
+#URI_droneA0 = 'radio://0/80/2M/E7E7E7E7E7'
+#URI_droneA0 = 'radio://0/80/2M/E7E7E7E7E5' # This is drone 2
+
 URI_droneA0 = 'radio://0/60/2M/E6E6E6E6E6'
 URI_droneA1 = 'radio://0/60/2M/E6E6E6E6E7'
 URI_droneA2 = 'radio://0/60/2M/E6E6E6E6E8'
@@ -54,6 +57,10 @@ ROUTE_2 = [
     (0.5, 0.5, 1.5, 2),     # go left and foward
 ]
 
+ROUTE_3 = [
+    (0, 0, 0, 10),       # go up
+]
+
 ROUTE_TEST = [
     (0, 0, 1, 1),       # go up
     (0, 0, 1, 1),       # hover 1 sec
@@ -69,11 +76,15 @@ ROUTE_TEST2 = [
 
 # (time, (r,g,b))
 LIGHTS_0 = [
-    (5, (100, 0, 0)),
-    (5, (0, 100, 0)),
-    (5, (0, 0, 100)),
-    (5, (0, 100, 0)),
-    (5, (100, 0, 0)),
+    (2, (0, 0, 0)),
+    (2, (100, 0, 0)),
+    (2, (150, 0, 0)),
+    (2, (200, 0, 0)),
+    (2, (255, 0, 0)),
+    (5, (0, 255, 0)),
+    (5, (0, 0, 255)),
+    (5, (0, 255, 0)),
+    (5, (255, 0, 0)),
     (1000, (0, 0, 0))
 ]
 

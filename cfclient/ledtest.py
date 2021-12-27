@@ -20,7 +20,6 @@ URI = uri_helper.uri_from_env(default='radio://0/60/2M/E6E6E6E6E6')
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
 
-
 if __name__ == '__main__':
     # Initialize the low-level drivers
     cflib.crtp.init_drivers()
@@ -28,13 +27,36 @@ if __name__ == '__main__':
     with SyncCrazyflie(URI, cf=Crazyflie(rw_cache='./cache')) as scf:
         cf = scf.cf
 
+        # Set fade to color effect
+        cf.param.set_value('ring.effect', '14')
+        # Set fade time i seconds
+        cf.param.set_value('ring.fadeTime', '5.0')
+        # Set the RGB values in one uint32 0xRRGGBB
+        cf.param.set_value('ring.fadeColor', '0x0000A0')
+        time.sleep(1)
+        cf.param.set_value('ring.fadeColor', '0x00A000')
+        time.sleep(1)
+        cf.param.set_value('ring.fadeColor', '0xA00000')
+        time.sleep(1)
+        time.sleep(0xffff)
+
+
+
+        # Set solid color effect
+        cf.param.set_value('ring.effect', '13')
+        # Set the RGB values
+        cf.param.set_value('ring.solidRed', '0')
+        cf.param.set_value('ring.solidGreen', '100')
+        cf.param.set_value('ring.solidBlue', '0')
+        time.sleep(0xffff)
+
         # Set solid color effect
         cf.param.set_value('ring.effect', '7')
         # Set the RGB values
         cf.param.set_value('ring.solidRed', '100')
         cf.param.set_value('ring.solidGreen', '0')
         cf.param.set_value('ring.solidBlue', '0')
-        time.sleep(0xffffff)
+        time.sleep(0xffff)
 
 
 
