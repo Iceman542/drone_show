@@ -6,7 +6,7 @@
 # //  ***************************************************************************
 
 import os
-import math
+import vlc
 import time
 import struct
 import socket
@@ -48,6 +48,9 @@ g_FlowManagerInstances = dict()
 g_number_of_drones = 0
 g_number_of_drones_ready = 0
 g_first_log = True
+
+# SETUP SONG
+song = vlc.MediaPlayer("Crystallize_v1.mp3")
 
 # ['B' size cmd data 'E']
 DRONE_CMD_HEADER = 0x1F
@@ -229,7 +232,7 @@ class FlowManagerClass():
                 cf.param.set_value('ring.solidGreen', '0')
                 cf.param.set_value('ring.solidBlue', '0')
 
-            print(self.m_uri + " online")
+                print(self.m_uri + " online")
 
             # WAIT FOR THE OTHER DRONES
             try:
@@ -243,6 +246,7 @@ class FlowManagerClass():
                 time.sleep(0.01)
 
             # START FLIGHT
+            song.play()
             for r in route:
                 # CHECK FOR CANCEL
                 if g_end_flight or self.m_end_flight:
@@ -309,6 +313,7 @@ class FlowManagerClass():
                 time.sleep(0.1)
         except:
             traceback.print_exc()
+            song.stop()
 
         # LAND
         if cf is not None:
@@ -319,6 +324,7 @@ class FlowManagerClass():
             cf.param.set_value('ring.effect', '0')
 
         g_drone_comms.send_point(self.m_index, x, y, 0)
+        song.stop()
         end_flight()
         print(self.m_uri + " offline")
 

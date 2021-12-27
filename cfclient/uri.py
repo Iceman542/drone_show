@@ -4,7 +4,7 @@
 #URI_droneA0 = 'radio://0/80/2M/E7E7E7E7E7'
 #URI_droneA0 = 'radio://0/80/2M/E7E7E7E7E5' # This is drone 2
 
-URI_droneA0 = 'radio://0/60/2M/E6E6E6E6E6'
+URI_droneA = 'radio://0/60/2M/E6E6E6E6E6'
 URI_droneA1 = 'radio://0/60/2M/E6E6E6E6E7'
 URI_droneA2 = 'radio://0/60/2M/E6E6E6E6E8'
 URI_droneT2 = 'radio://0/80/2M/E7E7E7E7E7'
@@ -58,7 +58,38 @@ ROUTE_2 = [
 ]
 
 ROUTE_3 = [
-    (0, 0, 0, 10),       # go up
+    (0, 0, 1, 10),       # go up
+]
+
+
+# MAIN ROUTES
+# --- THERE IS A BREAK EVERY 10 SEC ---
+# --- Directions are in prospective of the audience ---
+ROUTE_10 = [  # start center
+    (0, 0, 0, 2),       # wait
+    (0, 0, 1, 2),       # go up
+    (-0.5, 0, 1.7, 5),       # Back and up
+    (-0.5, 0, 1.7, 1),       # hover
+
+    (-0.5, 0.5, 1.7, 2),     # go right
+    (-0.5, 0, 1.7, 8),       # hover
+]
+
+ROUTE_11 = [  # Start Right
+    (0, 0, 0, 8),       # wait
+    (0, 0, 1, 2),        # go up
+
+    (-1, 0, 1.7, 5),       # Back and up
+    (-1, 0, 1.7, 2),       # hover
+    (-1, -1, 1.7, 2),     # go left
+    (-1, -1, 1.7, 1),       # hover
+]
+
+ROUTE_12 = [  # Start Left
+    (0, 0, 0, 14),       # wait 14 seconds
+    (0, 0, 1, 2),      # go up
+    (0, 0.5, 1, 4),      # move right to center
+
 ]
 
 ROUTE_TEST = [
@@ -98,14 +129,14 @@ LIGHTS_1 = [
 ]
 
 LIGHTS_2 = [
-    (5, (0, 0, 255)),
-    (5, (0, 255, 0)),
-    (5, (255, 0, 0)),
-    (5, (0, 255, 255)),
-    (5, (255, 255, 255)),
+    (2, (0, 0, 255)),
+    (2, (0, 255, 0)),
+    (2, (255, 0, 0)),
+    (2, (0, 255, 255)),
+    (2, (255, 255, 255)),
     (1000, (0, 0, 0))
 ]
 
-PARAMS_0 = {'index': 0, "start_pos": (0, -2, 0)}
-PARAMS_1 = {'index': 1, "start_pos": (0, 0, 0)}
-PARAMS_2 = {'index': 2, "start_pos": (0, 2, 0)}
+PARAMS_0 = {'index': 0, "start_pos": (0, 0, 0)}
+PARAMS_1 = {'index': 1, "start_pos": (0, -0.5, 0)}
+PARAMS_2 = {'index': 2, "start_pos": (0, .5, 0)}

@@ -1,3 +1,4 @@
+
 """
 Simple example that connects to the crazyflie at `URI` and runs a figure 8
 sequence. This script requires some kind of location system, it has been
