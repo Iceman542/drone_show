@@ -91,10 +91,15 @@ public class Drone : MonoBehaviour
         m_flow_manager_pos.y = pos.z;
         m_flow_manager_pos.z = pos.x;
         m_flow_manager_speed = speed;
+
+
+        // Debug.Log(String.Format("Start FlowManagerPosition:: {0}, {1}, {2}, {3}", m_flow_manager_pos.x, m_flow_manager_pos.y, m_flow_manager_pos.z, speed));
     }
 
     public void FlowManagerPosition(Vector3 pos, float speed)
     {
+        Debug.Log(String.Format("BEGIN:: {0}, {1}, {2}", m_flow_manager_pos.x, m_flow_manager_pos.y, m_flow_manager_pos.z));
+
         pos.x = m_flow_manager_start_pos.x - pos.x;
         pos.y += m_flow_manager_start_pos.y;
         pos.z += m_flow_manager_start_pos.z;
@@ -108,7 +113,7 @@ public class Drone : MonoBehaviour
         m_flow_manager_pos.z = pos.x;
         m_flow_manager_speed = speed;
 
-        //Debug.Log(String.Format("FlowManagerPosition:: {0}, {1}, {2}, {3}", m_flow_manager_pos.x, m_flow_manager_pos.y, m_flow_manager_pos.z, speed));
+        // Debug.Log(String.Format("FlowManagerPosition:: {0}, {1}, {2}, {3}", m_flow_manager_pos.x, m_flow_manager_pos.y, m_flow_manager_pos.z, speed));
     }
 
     public void FlowManagerLights(byte r, byte g, byte b)
