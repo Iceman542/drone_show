@@ -91,16 +91,6 @@ class drone_class(base_class):
                     self.m_led_class = led_class()
                     self.m_led_class.open(settings, self.m_cf)
 
-                # Flight Controller
-                self.m_cf.param.set_value('kalman.initialX', 0)
-                self.m_cf.param.set_value('kalman.initialY', 0)
-                self.m_cf.param.set_value('kalman.initialZ', 0)
-
-                self.m_cf.param.set_value('kalman.resetEstimation', '1')
-                time.sleep(0.1)
-                self.m_cf.param.set_value('kalman.resetEstimation', '0')
-                time.sleep(2)
-
                 # Logging - this creates a thread for each drone
                 self.m_logconf = LogConfig(name='Stabilizer', period_in_ms=100)
                 self.m_logconf.add_variable('pm.batteryLevel', 'float')
@@ -115,10 +105,45 @@ class drone_class(base_class):
 
             print(self.m_uri + " online")
         except:
-            # traceback.print_exc()
+            traceback.print_exc()
             pass
 
         self.m_running = True
+
+    def tick_position(self, x, y, z, rate):
+
+        # This shows all log and true values of drone
+        #print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
+
+        # PROCESS UP
+        vx = x - self.m_kalman_x
+        if vx > rate:
+            vx = rate
+        if vx < -rate:
+            vx = -rate
+        vy = y - self.m_kalman_y
+        if vy > rate:
+            vy = rate
+        if vy < -rate:
+            vy = -rate
+        vz = z - self.m_kalman_z
+        if vz > rate:
+            vz = rate
+        if vz < -rate:
+            vz = -rate
+
+        vyaw = self.m_current_yaw
+        if vyaw > 0.4:
+            vyaw = 5.5
+        elif vyaw < -0.4:
+            vyaw = -5.5
+        else:
+            vyaw = 0
+        #print("\t%f %f" % (vyaw, self.m_current_yaw))
+
+        # This is the actual command that send the drone the point to move to
+        if self.m_cf is not None:
+            self.m_cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
 
     def tick(self):
         global g_end_flight
@@ -140,40 +165,7 @@ class drone_class(base_class):
             y = r[1]
             z = r[2]
             rate = r[3]
-
-            # This shows all log and true values of drone
-            # print("%f %f %f -> %f %f %f %f - %f" % (self.m_kalman_x, self.m_kalman_y, self.m_kalman_z, x, y, z, rate, self.m_current_yaw))
-
-            # PROCESS UP
-            vx = x - self.m_kalman_x
-            if vx > rate:
-                vx = rate
-            if vx < -rate:
-                vx = -rate
-            vy = y - self.m_kalman_y
-            if vy > rate:
-                vy = rate
-            if vy < -rate:
-                vy = -rate
-            vz = z - self.m_kalman_z
-            if vz > rate:
-                vz = rate
-            if vz < -rate:
-                vz = -rate
-
-            vyaw = self.m_current_yaw
-            if vyaw > 0.5:
-                vyaw = 5.5
-            elif vyaw < -0.5:
-                vyaw = -5.5
-            else:
-                vyaw = 0
-
-            #print("%f" % vyaw)
-
-            # This is the actual command that send the drone the point to move to
-            if self.m_cf is not None:
-                self.m_cf.commander.send_velocity_world_setpoint(vx, vy, vz, vyaw)  # vx, vy, vz, yaw
+            self.tick_position(x, y, z, rate)
 
             g_unity_class.send_point(self.m_index, x, y, z)
 
@@ -195,13 +187,18 @@ class drone_class(base_class):
 
             # DRONE
             if self.m_cf is not None:
-                # LAND
-                while self.m_kalman_z > 0.1:
-                    self.m_cf.commander.send_velocity_world_setpoint(0, 0, -0.3, 0)  # vx, vy, vz, yaw
-                    time.sleep(0.1)
-                self.m_cf.commander.send_stop_setpoint()
                 self.m_cf.param.set_value('ring.effect', '0')
 
+                # LAND
+                x = self.m_x
+                y = self.m_y
+                z = self.m_kalman_z
+                while self.m_kalman_z > 0.1:
+                    z -= 0.3
+                    self.tick_position(x, y, z, 0.5)
+                    time.sleep(0.1)
+
+                self.m_cf.commander.send_stop_setpoint()
                 self.m_logconf.stop()
                 self.m_cf = None
             else:

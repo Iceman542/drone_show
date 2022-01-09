@@ -24,7 +24,7 @@ class music_class(base_class):
 
     def tick(self):
         try:
-            if not self.m_running:
+            if self.m_song and not self.m_running:
                 self.m_song.play()
                 self.m_running = True
         except:

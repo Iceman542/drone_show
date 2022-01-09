@@ -7,7 +7,7 @@ import traceback
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
-#from cflib.crazyflie.swarm import CachedCfFactory, Swarm
+from cflib.crazyflie.swarm import CachedCfFactory, Swarm
 
 from flight_base import g_begin_flight, g_end_flight, g_drone_entity
 from flight_music import g_music_class
@@ -25,7 +25,7 @@ def thread_function():
     global g_end_flight
 
     input()                             # WAIT FOR ENTER
-    print("ENTER pressed!!!")
+    print("ENTER pressed - waiting 5 seconds to cleanup")
     g_end_flight = True
 
 def thread_function2(flight_time):
@@ -58,13 +58,29 @@ def find_drone_index(uri):
             return i
     return None
 
-def drone_main(index, settings):
+def reset_estimator(scf):
+    try:
+        cf = scf.cf
+        cf.param.set_value('kalman.initialX', 0)
+        cf.param.set_value('kalman.initialY', 0)
+        cf.param.set_value('kalman.initialZ', 0)
+
+        cf.param.set_value('kalman.resetEstimation', '1')
+        time.sleep(0.1)
+        cf.param.set_value('kalman.resetEstimation', '0')
+        time.sleep(2)
+    except:
+        pass
+
+#def drone_main(scf, index):
+def drone_main(scf):
+    index = 0
+    #def drone_main(index, settings):
     global g_begin_flight
     global g_drone_entity
 
     try:
         uri = g_settings["uri"][index]
-        scf = SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache'))
         cf = scf.cf
         count = len(g_settings["uri"])
 
@@ -93,42 +109,13 @@ def drone_main(index, settings):
     except:
         traceback.print_exc()
 
-# ********************* #
-# BEGIN - DEBUG SECTION #
-g_debugging = True
-if g_debugging:
-    from uri_local import UNITY_SETTINGS, START_POS_0
-    URI_drone = 'radio://0/80/2M/E7E7E7E7E7'
-    ROUTE_0 = [
-        (0, 0, 1, 1),       # go up
-        (0, 0, 1, 2),       # hover
-        (1, 0, 0.5, 2),     # go forward and down
-        (0, 0, 0.5, 3),     # hover
-        (0, 0.5, 1, 2),     # go left
-        (0, -1, 1, 2),      # go right
-        (0, 0, 1, 2),       # hover
-        (1, 0, 1, 4),       # foward
-        (0, -0.5, 1.5, 2),  # go right and up
-        (-1, 0, 1.5, 3),    # Back and up
-        (0.5, 0.5, 1.5, 2), # go left and foward
-        (0, 0, 1, 2),       # back to takeoff spot
-    ]
-    LED_0 = [
-        (4, (0, 0, 0)),
-    ]
-    g_settings = {
-        "song": None, # "Crystallize_v1.mp3",
-        "unity": UNITY_SETTINGS,
-        "flight_time": 30,
-
-        "uri": [URI_drone],
-        "led": [LED_0],
-        "route": [ROUTE_0],
-        "start_pos": [START_POS_0]
-    }
-    g_debugging = True
-# END - DEBUG SECTION #
-# ******************* #
+def drone_thread(index):
+    try:
+        with SyncCrazyflie(g_settings["uri"][index], cf=Crazyflie(rw_cache='./cache')) as scf:
+            reset_estimator(scf)
+            drone_main(scf, index)
+    except:
+        traceback.print_exc()
 
 if __name__ == '__main__':
     try:
@@ -149,16 +136,17 @@ if __name__ == '__main__':
             x.start()
 
             # Process the swarm
+            factory = CachedCfFactory(rw_cache='./cache')
+            with Swarm(g_settings["uri"], factory=factory) as swarm:
+                swarm.parallel(reset_estimator)
+                swarm.parallel(drone_main)
+
             """
-            if not g_debugging:
-                factory = CachedCfFactory(rw_cache='./cache')
-                with Swarm(g_settings["uri"], factory=factory) as swarm:
-                    swarm.parallel(drone_main)
+            for index in range(0, len(g_settings["uri"])):
+                x = threading.Thread(target=drone_thread, args=(index, ))
+                x.start()
             """
 
-            for index in range(0, len(g_settings["uri"])):
-                x = threading.Thread(target=drone_main, args=(index, g_settings, ))
-                x.start()
             while not g_end_flight:
                 time.sleep(1)
         finally:
