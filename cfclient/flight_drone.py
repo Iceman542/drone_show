@@ -190,6 +190,7 @@ class drone_class(base_class):
                 self.m_cf.param.set_value('ring.effect', '0')
 
                 # LAND
+                print("Landing")
                 x = self.m_x
                 y = self.m_y
                 z = self.m_kalman_z

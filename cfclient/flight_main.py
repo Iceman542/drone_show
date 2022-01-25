@@ -98,7 +98,14 @@ def drone_main(scf):
         try:
             # WAIT FOR DRONES TO GET READY
             while not g_begin_flight:
-                time.sleep(.1)
+                print("This needs to be fixed later")
+                time.sleep(1)
+                """
+                #######################################3
+                Fix this
+                #########################################
+                """
+                g_begin_flight = True
 
             while not g_end_flight:
                 m_drone_class.tick()
