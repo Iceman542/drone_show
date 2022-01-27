@@ -161,7 +161,7 @@ def main():
         sys.exit(0)
 
     # Start up the main user-interface
-    from ui.main import MainUI
+    from cfclient.ui.main import MainUI
     from PyQt5.QtWidgets import QApplication
     from PyQt5.QtGui import QIcon
 

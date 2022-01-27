@@ -16,6 +16,7 @@ from uri_local import g_settings
 import flight_drone
 
 g_mutex = threading.Lock()
+g_drone_count = 0
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
@@ -75,14 +76,13 @@ def reset_estimator(scf):
 #def drone_main(scf, index):
 def drone_main(scf):
     index = 0
-    #def drone_main(index, settings):
     global g_begin_flight
     global g_drone_entity
+    global g_drone_count
 
     try:
         uri = g_settings["uri"][index]
         cf = scf.cf
-        count = len(g_settings["uri"])
 
         m_drone_class = flight_drone.drone_class()
         m_drone_class.open(g_settings, index, cf, uri)
@@ -90,7 +90,8 @@ def drone_main(scf):
         try:
             g_mutex.acquire()
             g_drone_entity[uri] = m_drone_class
-            if len(g_drone_entity) == count:
+            g_drone_count += 1
+            if g_drone_count >= len(g_settings["uri"]):
                 g_begin_flight = True
         finally:
             g_mutex.release()
@@ -98,14 +99,7 @@ def drone_main(scf):
         try:
             # WAIT FOR DRONES TO GET READY
             while not g_begin_flight:
-                print("This needs to be fixed later")
-                time.sleep(1)
-                """
-                #######################################3
-                Fix this
-                #########################################
-                """
-                g_begin_flight = True
+                time.sleep(.1)
 
             while not g_end_flight:
                 m_drone_class.tick()
