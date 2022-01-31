@@ -37,40 +37,71 @@ class led_class(base_class):
         self.m_lights = None
         self.m_running = False
 
-    def open(self, settings, cf, index):
-        # SETUP LIGHTS
-        self.m_drone_index = settings["index"]
-        self.m_cf = cf
-        self.m_lights = settings["led"][index]
+    def open(self, settings, cf, index, no_led):
+        if not no_led:
+            # SETUP LIGHTS
+            self.m_drone_index = settings["index"]
+            self.m_cf = cf
+            self.m_lights = settings["led"][index]
 
-        # TURN LIGHTS OFF
-        if self.m_cf is not None:
-            # Set default solid color effect
-            self.m_cf.param.set_value('ring.effect', '0')
+            # TURN LIGHTS OFF
+            if self.m_cf is not None:
+                # Set default solid color effect
+                self.m_cf.param.set_value('ring.effect', '0')
+            self.m_running = True
 
-        self.m_running = True
+    # off/solid/whitespinner/colorspinner/colorspinner2/doublespinner
 
     def tick(self):
         # Lights - (time, (r,g,b))
         try:
-            if self.m_lights_timeout <= 0.0:
-                self.m_lights_timeout = float(self.m_lights[self.m_lights_index][0])
+            if self.m_running:
+                if self.m_lights_timeout <= 0.0:
+                    ref = self.m_lights[self.m_lights_index]
+                    rgb = ref[1]
+                    self.m_lights_timeout = float(ref[0])
 
-                rgb = self.m_lights[self.m_lights_index][1]
+                    effect_name = "solid"
+                    if len(ref) > 2:
+                        effect_name = ref[2]
 
-                # Set the RGB values
-                if self.m_cf is not None:
-                    # lights = (bulb_index,r,g,b,visible)
-                    self.m_cf.param.set_value('ring.effect', '7')
-                    self.m_cf.param.set_value('ring.solidRed', str(rgb[0]))
-                    self.m_cf.param.set_value('ring.solidGreen', str(rgb[1]))
-                    self.m_cf.param.set_value('ring.solidBlue', str(rgb[2]))
+                    # Set the RGB values
+                    if self.m_cf is not None:
+                        if effect_name == "off":
+                            effect = '0'
+                        elif effect_name == "whitespinner":
+                            effect = '1'
+                        elif effect_name == "colorspinner":
+                            effect = '2'
+                        elif effect_name == "colorspinner2":
+                            effect = '5'
+                        elif effect_name == "doublespinner":
+                            effect = '6'
+                        elif effect_name == "ledtab":
+                            effect = '13'
 
-                    # ????????
-                    # g_drone_comms.send_lights(self.m_index, rgb)
+                        if effect == '13':
+                            self.m_cf.param.set_value('ring.effect', effect)
+                            mem = self.m_cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
+                            if len(mem) > 0:
+                                mem[0].leds[0].set(r=0, g=100, b=0)
+                                mem[0].leds[3].set(r=0, g=0, b=100)
+                                mem[0].leds[6].set(r=100, g=0, b=0)
+                                mem[0].leds[9].set(r=100, g=100, b=100)
+                                mem[0].write_data(None)
 
-                    self.m_lights_index += 1
-            self.m_lights_timeout -= 0.1
+                        else:
+                            # lights = (bulb_index,r,g,b,visible)
+                            self.m_cf.param.set_value('ring.effect', effect)
+                            self.m_cf.param.set_value('ring.solidRed', str(rgb[0]))
+                            self.m_cf.param.set_value('ring.solidGreen', str(rgb[1]))
+                            self.m_cf.param.set_value('ring.solidBlue', str(rgb[2]))
+
+                            # ????????
+                            # g_drone_comms.send_lights(self.m_index, rgb)
+
+                        self.m_lights_index += 1
+                self.m_lights_timeout -= 0.1
         except:
             self.close()
         return self.m_running

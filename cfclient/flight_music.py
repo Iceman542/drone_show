@@ -19,8 +19,10 @@ class music_class(base_class):
         self.m_song = None
         self.m_running = False
 
-    def open(self, settings):
-        self.m_song = vlc.MediaPlayer(settings["song"])
+    def open(self, settings, no_music):
+        if not no_music:
+            self.m_song = vlc.MediaPlayer(settings["song"])
+            self.m_running = True
 
     def tick(self):
         try:

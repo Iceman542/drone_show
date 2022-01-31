@@ -28,17 +28,19 @@ class unity_class(base_class):
     def __init__(self):
         self.m_socket = None
         self.m_drone_queue = deque()
-        self.m_continue = True
+        self.m_continue = False
 
-    def open(self, settings):
+    def open(self, settings, no_unity):
         try:
-            address = settings["unity"]
-            self.m_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.m_socket.connect((str(address[0]), int(address[1])))
-            #self.m_socket.recv(1, socket.MSG_DONTWAIT | socket.MSG_PEEK)
-            t = threading.Thread(target=self.thread, args=(self,))
-            t.start()
-            print("Unity connected: %s:%d" % (str(address[0]), int(address[1])))
+            self.m_continue = not no_unity
+            if self.m_continue:
+                address = settings["unity"]
+                self.m_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.m_socket.connect((str(address[0]), int(address[1])))
+                #self.m_socket.recv(1, socket.MSG_DONTWAIT | socket.MSG_PEEK)
+                t = threading.Thread(target=self.thread, args=(self,))
+                t.start()
+                print("Unity connected: %s:%d" % (str(address[0]), int(address[1])))
         except:
             self.m_socket.close()
             print("Unity failed to connect: %s:%d" % (str(address[0]), int(address[1])))
@@ -63,30 +65,34 @@ class unity_class(base_class):
     """
 
     def send(self, cmd, buf):
-        data = bytearray()
-        data += struct.pack("<BBB", DRONE_CMD_HEADER, len(buf), cmd)
-        data += buf
-        data += struct.pack("<B", DRONE_CMD_FOOTER)
         if self.m_continue:
+            data = bytearray()
+            data += struct.pack("<BBB", DRONE_CMD_HEADER, len(buf), cmd)
+            data += buf
+            data += struct.pack("<B", DRONE_CMD_FOOTER)
             self.m_socket.send(data)
 
     def send_uri(self, index, uri):
-        data = struct.pack("<B", index)
-        data += uri.encode('utf-8')
-        self.m_drone_queue.appendleft((DRONE_CMD_SET_URI, data))
+        if self.m_continue:
+            data = struct.pack("<B", index)
+            data += uri.encode('utf-8')
+            self.m_drone_queue.appendleft((DRONE_CMD_SET_URI, data))
 
     def send_start_point(self, index, x, y, z):
-        data = struct.pack("<Bfff", index, x, y, z)
-        self.m_drone_queue.appendleft((DRONE_CMD_START_POSITION, data))
+        if self.m_continue:
+            data = struct.pack("<Bfff", index, x, y, z)
+            self.m_drone_queue.appendleft((DRONE_CMD_START_POSITION, data))
 
     def send_point(self, index, x, y, z):
-        data = struct.pack("<Bfff", index, x, y, z)
-        self.m_drone_queue.appendleft((DRONE_CMD_SET_POSITION, data))
+        if self.m_continue:
+            data = struct.pack("<Bfff", index, x, y, z)
+            self.m_drone_queue.appendleft((DRONE_CMD_SET_POSITION, data))
 
     # lights = (bulb_index,r,g,b)
     def send_lights(self, index, rgb):
-        data = struct.pack("<BBBB", index, rgb[0], rgb[1], rgb[2])
-        self.m_drone_queue.appendleft((DRONE_CMD_SET_LIGHTS, data))
+        if self.m_continue:
+            data = struct.pack("<BBBB", index, rgb[0], rgb[1], rgb[2])
+            self.m_drone_queue.appendleft((DRONE_CMD_SET_LIGHTS, data))
 
     @staticmethod
     def thread(self):
