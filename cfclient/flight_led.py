@@ -37,12 +37,11 @@ class led_class(base_class):
         self.m_lights = None
         self.m_running = False
 
-    def open(self, settings, cf, index, no_led):
+    def open(self, settings, cf, no_led):
         if not no_led:
             # SETUP LIGHTS
-            self.m_drone_index = settings["index"]
             self.m_cf = cf
-            self.m_lights = settings["led"][index]
+            self.m_lights = settings["led"]
 
             # TURN LIGHTS OFF
             if self.m_cf is not None:
@@ -79,15 +78,20 @@ class led_class(base_class):
                             effect = '6'
                         elif effect_name == "ledtab":
                             effect = '13'
+                        else:
+                            effect = '7'
 
                         if effect == '13':
+                            self.m_cf.param.set_value('ring.effect', '0')
+                            time.sleep(0.1)
                             self.m_cf.param.set_value('ring.effect', effect)
                             mem = self.m_cf.mem.get_mems(MemoryElement.TYPE_DRIVER_LED)
                             if len(mem) > 0:
-                                mem[0].leds[0].set(r=0, g=100, b=0)
-                                mem[0].leds[3].set(r=0, g=0, b=100)
-                                mem[0].leds[6].set(r=100, g=0, b=0)
-                                mem[0].leds[9].set(r=100, g=100, b=100)
+                                ledtabs = ref[3]
+                                for l in ledtabs:
+                                    index = l[0]
+                                    r, g, b = l[1]
+                                    mem[0].leds[l[0]].set(r=r, g=g, b=b)
                                 mem[0].write_data(None)
 
                         else:
@@ -104,12 +108,15 @@ class led_class(base_class):
                 self.m_lights_timeout -= 0.1
         except:
             self.close()
+            #traceback.print_exc()
         return self.m_running
 
     def close(self):
         # TURN LIGHTS OFF
         if self.m_cf is not None:
             # Set default solid color effect
+            self.m_cf.param.set_value('ring.effect', '0')
+            time.sleep(0.1)
             self.m_cf.param.set_value('ring.effect', '0')
             self.m_cf = None
         self.m_running = False
@@ -125,28 +132,19 @@ if __name__ == '__main__':
         from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
         from cflib.utils import uri_helper
 
-        from leds import led_1                        # <- CHANGE THIS
-        led_test = led_1.LED_1
+        from leds import led_5                        # <- CHANGE THIS
 
-        # URI_drone = 'radio://0/60/2M/E6E6E6E6E6'    # <- CHANGE THIS
-        URI_drone = 'radio://0/80/2M/E7E7E7E7E5'
+        uri = 'radio://0/60/2M/E6E6E6E6E6'
+        settings = {"index": 0, "led": led_5.LED_5}
 
-        g_settings = {
-            "drone": [URI_drone],
-            "led": [led_test],
-        }
-
-        index = 0
-        URI = uri_helper.uri_from_env(default=g_settings["drone"][g_settings["index"]])
         cflib.crtp.init_drivers()
-        with SyncCrazyflie(URI, cf=Crazyflie(rw_cache='./cache')) as scf:
+        with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
             led = led_class()
-            led.open(g_settings, scf.cf, index)
+            led.open(settings, scf.cf, False)
             while True:
                 if not led.tick():
                     break
                 time.sleep(0.1)
-
     except:
         traceback.print_exc()
     os._exit(0)

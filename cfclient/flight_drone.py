@@ -172,27 +172,26 @@ class drone_class(base_class):
 
         return full_route
 
-    def open(self, settings, index, cf, uri, no_route):
+    def open(self, settings, index, cf, uri, no_route, no_led):
         try:
             # LED
             if cf is not None:
-                if self.m_led_class:
-                    self.m_led_class = led_class()
-                    self.m_led_class.open(settings, cf)
+                self.m_led_class = led_class()
+                self.m_led_class.open(settings, cf, no_led)
 
             # SETUP LIGHTS
             self.m_index = index
             self.m_cf = cf
             self.m_uri = uri
 
-            self.m_route = self.expand_route(settings["route"][index])
+            self.m_route = self.expand_route(settings["route"])
             self.m_route_index = 0
 
             # SEND URI INDEX & REFERENCE NAME
             g_unity_class.send_uri(self.m_index, self.m_uri)
 
             # SEND STARTING POSITION OF DRONE
-            start_pos = settings["start_pos"][index]
+            start_pos = settings["start_pos"]
             g_unity_class.send_start_point(self.m_index, start_pos[0], start_pos[1], start_pos[2])
             time.sleep(2)
 

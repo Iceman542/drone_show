@@ -1,4 +1,4 @@
-# (x_meters, y_meters, z_meters, time_seconds)
+# (x_meters, y_meters, z_meters, time_seconds, rate)
 ROUTE_0 = [
     (0, 0, 1, 1),       # go up
     (0, 0, 1, 2),       # hover

@@ -65,12 +65,6 @@ def thread_function2(flight_time):
     except:
         traceback.print_exc()
 
-def find_drone_index(uri):
-    for i in range(0, len(g_settings["uri"])):
-        if g_settings["uri"][i] == uri:
-            return i
-    return None
-
 def reset_estimator(scf):
     try:
         cf = scf.cf
@@ -91,23 +85,24 @@ def reset_estimator(scf):
 
 #def drone_main(scf, index):
 def drone_main(scf):
-    index = 0
     global g_begin_flight
     global g_drone_entity
     global g_drone_count
 
     try:
-        uri = g_settings["uri"][index]
         cf = scf.cf
+        uri = cf.link_uri
+        settings = g_settings["drones"][uri]
+        index = settings["index"]
 
         m_drone_class = flight_drone.drone_class()
-        m_drone_class.open(g_settings, index, cf, uri, g_args.no_route)
+        m_drone_class.open(settings, index, cf, uri, g_args.no_route, g_args.no_led)
 
         try:
             g_mutex.acquire()
             g_drone_entity[uri] = m_drone_class
             g_drone_count += 1
-            if g_drone_count >= len(g_settings["uri"]):
+            if g_drone_count >= len(g_settings["drones"]):
                 g_begin_flight = True
         finally:
             g_mutex.release()
@@ -126,13 +121,18 @@ def drone_main(scf):
     except:
         traceback.print_exc()
 
+"""
 def drone_thread(index):
     try:
-        with SyncCrazyflie(g_settings["uri"][index], cf=Crazyflie(rw_cache='./cache')) as scf:
+        uri_list = list()
+        for k, v in g_settings["drones"].items():
+            uri_list.append(k)
+        with SyncCrazyflie(uri_list, cf=Crazyflie(rw_cache='./cache')) as scf:
             reset_estimator(scf)
-            drone_main(scf, index)
+            drone_main(scf)
     except:
         traceback.print_exc()
+"""
 
 if __name__ == '__main__':
     try:
@@ -156,7 +156,10 @@ if __name__ == '__main__':
 
             # Process the swarm
             factory = CachedCfFactory(rw_cache='./cache')
-            with Swarm(g_settings["uri"], factory=factory) as swarm:
+            uri_list = list()
+            for k, v in g_settings["drones"].items():
+                uri_list.append(k)
+            with Swarm(uri_list, factory=factory) as swarm:
                 swarm.parallel(reset_estimator)
                 swarm.parallel(drone_main)
 

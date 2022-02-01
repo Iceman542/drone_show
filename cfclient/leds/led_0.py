@@ -1,4 +1,5 @@
 # (time, (r,g,b))
+# off/solid/whitespinner/colorspinner/colorspinner2/doublespinner
 LED_0 = [
     (2, (0, 0, 0)),
     (2, (100, 0, 0)),

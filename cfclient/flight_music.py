@@ -26,9 +26,9 @@ class music_class(base_class):
 
     def tick(self):
         try:
-            if self.m_song and not self.m_running:
+            if self.m_song and self.m_running:
                 self.m_song.play()
-                self.m_running = True
+                self.m_running = False
         except:
             traceback.print_exc()
         return self.m_running
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         try:
             from uri_local import g_settings
 
-            g_music_class.open(g_settings)
+            g_music_class.open(g_settings, False)
             g_music_class.tick()
             time.sleep(10)
         finally:
